@@ -81,6 +81,7 @@ type NegotiationState = {
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 const SETTINGS_KEY = "multi-agent-negotiation-sim.llmSettings";
 const TURN_DELAY_MS = 1400;
+const NEGOTIATION_TIMEOUT_MS = 90000;
 
 const defaultConfig: NegotiationConfig = {
   buyer: {
@@ -199,7 +200,7 @@ function ConfigPanel({
         </label>
         <button className="primary" onClick={onStart} disabled={loading}>
           <Play size={17} />
-          {loading ? "Running" : "Start Negotiation"}
+          {loading ? "Contacting Backend" : "Start Negotiation"}
         </button>
       </div>
     </section>
@@ -493,6 +494,8 @@ function App() {
   const start = async () => {
     setLoading(true);
     setError(undefined);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), NEGOTIATION_TIMEOUT_MS);
     const provider = settings.provider;
     const effectiveProvider = provider !== "mock" && !settings.apiKey ? "mock" : provider;
     const effectiveConfig = {
@@ -512,14 +515,21 @@ function App() {
       const response = await fetch(`${API_URL}/negotiations/start`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ config: effectiveConfig })
+        body: JSON.stringify({ config: effectiveConfig }),
+        signal: controller.signal
       });
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       const completedState = await response.json();
       setState(completedState);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const message = err instanceof Error && err.name === "AbortError"
+        ? `Timed out waiting for ${API_URL}. If this is Render, the backend may be waking up or VITE_API_URL may point to the wrong service URL.`
+        : err instanceof Error
+          ? `${err.message}. API endpoint: ${API_URL}`
+          : `Unknown error. API endpoint: ${API_URL}`;
+      setError(message);
     } finally {
+      window.clearTimeout(timeout);
       setLoading(false);
     }
   };
