@@ -14,7 +14,7 @@ Render free instances can spin down when idle, so the first backend request may 
 
 ## What It Demonstrates
 
-- LLM-driven multi-agent orchestration pattern with alternating buyer/seller turns
+- LangGraph-backed multi-agent orchestration pattern with alternating buyer/seller turns
 - Structured JSON communication between agents
 - Private agent goals and constraints separated from public negotiation history
 - Concise visible reasoning summaries without exposing hidden chain-of-thought
@@ -48,6 +48,8 @@ At the end of playback, the dashboard shows the accepted, failed, deadlocked, or
 flowchart LR
   UI["React Dashboard"] --> API["FastAPI Routes"]
   API --> ORCH["Negotiation Orchestrator"]
+  ORCH --> GRAPH["LangGraph StateGraph"]
+  GRAPH --> ORCH
   ORCH --> BUYER["Buyer Agent"]
   ORCH --> SELLER["Seller Agent"]
   BUYER --> PROVIDER["Provider Adapter\nMock / OpenAI / Anthropic"]
@@ -335,7 +337,7 @@ Each visible step shows:
 
 ## Why This Is A Multi-Agent System
 
-The buyer and seller are separate agents with different roles, private objectives, constraints, and negotiation styles. They do not share hidden goals. The orchestrator controls turn order and state, while each agent independently produces a structured offer and public message from its own perspective. The evaluator then deterministically scores the offer and decides whether the negotiation should continue, accept, fail, deadlock, or stop.
+The buyer and seller are separate agents with different roles, private objectives, constraints, and negotiation styles. They do not share hidden goals. The orchestrator uses a LangGraph `StateGraph` to control preflight checks, turn order, state transitions, and termination. Each agent independently produces a structured offer and public message from its own perspective. The evaluator then deterministically scores the offer and decides whether the negotiation should continue, recommend acceptance, accept, fail, deadlock, or stop.
 
 ## Probabilistic Reasoning vs Deterministic Control
 

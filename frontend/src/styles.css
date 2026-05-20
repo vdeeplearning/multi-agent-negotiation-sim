@@ -427,6 +427,11 @@ h3 {
   padding-right: 12px;
 }
 
+.turn.compact-final {
+  margin-bottom: 14px;
+  margin-top: 0;
+}
+
 .turn header {
   align-items: center;
   display: flex;

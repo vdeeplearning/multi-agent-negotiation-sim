@@ -370,6 +370,9 @@ function Transcript({ state }: { state?: NegotiationState }) {
         <Activity size={18} />
         <h2>Round Transcript</h2>
       </div>
+      {showFinalEntry && latestOffer && (
+        <FinalResultEntry state={state} offer={latestOffer} utility={latestUtility} compact />
+      )}
       {transcript.length === 0 ? <p className="muted">Start the run to see structured agent messages.</p> : transcript.map((entry) => (
         <article className={`turn ${entry.agent}`} key={`${entry.round_number}-${entry.agent}`}>
           <header>
@@ -385,41 +388,57 @@ function Transcript({ state }: { state?: NegotiationState }) {
         </article>
       ))}
       {showFinalEntry && latestOffer && (
-        <article className={`turn final ${state?.status}`}>
-          <header>
-            <b>Final Result: {formatStatus(state?.status ?? "")}</b>
-            <span>{state?.status === "accepted" ? "Agreement reached" : "No agreement"}</span>
-          </header>
-          <p>{state?.outcome_summary}</p>
-          <div className="final-summary-grid">
-            <div>
-              <span>Final offered price</span>
-              <b>${latestOffer.price.toLocaleString()}</b>
-            </div>
-            <div>
-              <span>Delivery</span>
-              <b>{latestOffer.delivery_days} days</b>
-            </div>
-            <div>
-              <span>Warranty</span>
-              <b>{latestOffer.warranty}</b>
-            </div>
-            <div>
-              <span>Contract</span>
-              <b>{latestOffer.contract_months} months</b>
-            </div>
-            <div>
-              <span>Buyer utility</span>
-              <b>{latestUtility?.buyer ?? "n/a"}</b>
-            </div>
-            <div>
-              <span>Seller utility</span>
-              <b>{latestUtility?.seller ?? "n/a"}</b>
-            </div>
-          </div>
-        </article>
+        <FinalResultEntry state={state} offer={latestOffer} utility={latestUtility} />
       )}
     </section>
+  );
+}
+
+function FinalResultEntry({
+  state,
+  offer,
+  utility,
+  compact = false
+}: {
+  state?: NegotiationState;
+  offer: Offer;
+  utility?: UtilityScore;
+  compact?: boolean;
+}) {
+  return (
+    <article className={`turn final ${state?.status}${compact ? " compact-final" : ""}`}>
+      <header>
+        <b>{compact ? "Final Result Summary" : `Final Result: ${formatStatus(state?.status ?? "")}`}</b>
+        <span>{state?.status === "accepted" ? "Agreement reached" : "No agreement"}</span>
+      </header>
+      <p>{state?.outcome_summary}</p>
+      <div className="final-summary-grid">
+        <div>
+          <span>Final offered price</span>
+          <b>${offer.price.toLocaleString()}</b>
+        </div>
+        <div>
+          <span>Delivery</span>
+          <b>{offer.delivery_days} days</b>
+        </div>
+        <div>
+          <span>Warranty</span>
+          <b>{offer.warranty}</b>
+        </div>
+        <div>
+          <span>Contract</span>
+          <b>{offer.contract_months} months</b>
+        </div>
+        <div>
+          <span>Buyer utility</span>
+          <b>{utility?.buyer ?? "n/a"}</b>
+        </div>
+        <div>
+          <span>Seller utility</span>
+          <b>{utility?.seller ?? "n/a"}</b>
+        </div>
+      </div>
+    </article>
   );
 }
 
