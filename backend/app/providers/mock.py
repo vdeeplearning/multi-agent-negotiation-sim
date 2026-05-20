@@ -19,6 +19,14 @@ class MockProvider(BaseLLMProvider):
         max_rounds: int = payload["max_rounds"]
         latest_offer: Offer | None = payload.get("latest_offer")
         self.add_usage(input_tokens=420 + len(payload.get("public_history", [])) * 110, output_tokens=145)
+        if payload.get("evaluator_guidance") and latest_offer:
+            return AgentResponse(
+                message="I can accept this offer because the evaluator indicates it is mutually viable.",
+                offer=latest_offer,
+                visible_reasoning_summary="The latest package appears workable for both sides, so accepting avoids unnecessary negotiation drift.",
+                accept=True,
+                walk_away=False,
+            )
         if role == AgentRole.BUYER:
             return self._buyer_turn(payload["private_config"], latest_offer, round_number, max_rounds)
         return self._seller_turn(payload["private_config"], latest_offer, round_number, max_rounds)

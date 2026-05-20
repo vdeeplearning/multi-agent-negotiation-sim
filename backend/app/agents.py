@@ -13,6 +13,7 @@ class NegotiationAgent:
         history: list[TranscriptEntry],
         latest_offer: Offer | None,
         round_number: int,
+        evaluator_guidance: str | None = None,
     ) -> AgentResponse:
         private_config = config.buyer if self.role == AgentRole.BUYER else config.seller
         payload = {
@@ -27,5 +28,6 @@ class NegotiationAgent:
             "round_number": round_number,
             "max_rounds": config.max_rounds,
             "scenario": config.scenario,
+            "evaluator_guidance": evaluator_guidance,
         }
         return self.provider.complete_agent_turn(payload)

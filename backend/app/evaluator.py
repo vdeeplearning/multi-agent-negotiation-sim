@@ -11,6 +11,7 @@ from app.schemas import (
 
 WARRANTY_BUYER_VALUE = {"basic": 10, "standard": 60, "extended": 100}
 WARRANTY_SELLER_COST = {"basic": 100, "standard": 65, "extended": 25}
+MUTUAL_VIABILITY_THRESHOLD = 65.0
 
 
 def _clamp(value: float, low: float = 0, high: float = 100) -> float:
@@ -65,6 +66,16 @@ def validate_feasible_config(config: NegotiationConfig) -> str | None:
             "No feasible delivery range: seller minimum delivery days "
             f"({config.seller.minimum_delivery_days}) exceeds buyer maximum delivery days "
             f"({config.buyer.max_delivery_days})."
+        )
+    return None
+
+
+def evaluator_recommendation(utilities: UtilityScore) -> str | None:
+    if utilities.buyer >= MUTUAL_VIABILITY_THRESHOLD and utilities.seller >= MUTUAL_VIABILITY_THRESHOLD:
+        return (
+            "This offer is mutually viable: buyer utility "
+            f"{utilities.buyer} and seller utility {utilities.seller} are both at or above "
+            f"{MUTUAL_VIABILITY_THRESHOLD:.0f}. Strongly consider accepting or making only a minimal final adjustment."
         )
     return None
 

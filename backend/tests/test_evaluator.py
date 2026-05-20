@@ -1,4 +1,4 @@
-from app.evaluator import compute_utilities, detect_deadlock, evaluate_termination, is_offer_valid, validate_feasible_config
+from app.evaluator import compute_utilities, detect_deadlock, evaluate_termination, evaluator_recommendation, is_offer_valid, validate_feasible_config
 from app.schemas import AgentRole, NegotiationConfig, NegotiationStatus, Offer, SellerConfig, TranscriptEntry
 
 
@@ -41,6 +41,17 @@ def test_acceptance_requires_valid_offer_and_utility() -> None:
 
     status, _ = evaluate_termination([entry], compute_utilities(offer, config), config)
     assert status == NegotiationStatus.ACCEPTED
+
+
+def test_evaluator_recommends_acceptance_for_mutual_viability() -> None:
+    config = NegotiationConfig()
+    offer = Offer(price=95000, delivery_days=25, warranty="standard", contract_months=24)
+    utilities = compute_utilities(offer, config)
+
+    guidance = evaluator_recommendation(utilities)
+
+    assert guidance is not None
+    assert "Strongly consider accepting" in guidance
 
 
 def test_deadlock_detects_low_movement_recent_offers() -> None:

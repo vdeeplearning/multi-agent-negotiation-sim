@@ -51,6 +51,7 @@ def build_agent_prompt(payload: dict[str, Any]) -> str:
         "private_config_for_this_agent_only": private_config.model_dump(),
         "public_history": history,
         "latest_offer": latest_offer.model_dump() if latest_offer else None,
+        "evaluator_guidance": payload.get("evaluator_guidance"),
         "constraints": payload["system_constraints"],
         "response_schema": AGENT_RESPONSE_SCHEMA,
     }
@@ -74,4 +75,3 @@ def extract_json_text(text: str) -> str:
     if start >= 0 and end >= start:
         return stripped[start : end + 1]
     return stripped
-

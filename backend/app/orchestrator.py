@@ -1,5 +1,5 @@
 from app.agents import NegotiationAgent
-from app.evaluator import compute_utilities, evaluate_termination, validate_feasible_config
+from app.evaluator import compute_utilities, evaluate_termination, evaluator_recommendation, validate_feasible_config
 from app.providers import get_provider
 from app.schemas import (
     AgentRole,
@@ -36,6 +36,7 @@ class NegotiationOrchestrator:
         )
         if self.runtime.fallback_reason:
             self._trace("provider_fallback", self.runtime.fallback_reason)
+        self.evaluator_guidance: str | None = None
 
     def run(self) -> NegotiationState:
         infeasible_reason = validate_feasible_config(self.config)
@@ -53,6 +54,7 @@ class NegotiationOrchestrator:
                 history=self.state.transcript,
                 latest_offer=self.state.latest_offer,
                 round_number=round_number,
+                evaluator_guidance=self.evaluator_guidance,
             )
             self._trace("offer_parsed", "Structured JSON response validated with Pydantic.", actor.role)
 
@@ -76,6 +78,9 @@ class NegotiationOrchestrator:
                 f"Buyer utility {utilities.buyer}; seller utility {utilities.seller}.",
                 actor.role,
             )
+            self.evaluator_guidance = evaluator_recommendation(utilities)
+            if self.evaluator_guidance:
+                self._trace("evaluator_recommendation", self.evaluator_guidance, actor.role)
 
             status, summary = evaluate_termination(self.state.transcript, utilities, self.config)
             self.state.status = status
