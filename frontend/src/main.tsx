@@ -372,28 +372,45 @@ function Transcript({ transcript }: { transcript: TranscriptEntry[] }) {
 function HistoryPanel({ state }: { state?: NegotiationState }) {
   const chartData = useMemo(() => state?.transcript.map((entry, index) => ({
     round: entry.round_number,
-    price: entry.offer.price,
-    buyer: state.utility_history[index]?.buyer ?? 0,
-    seller: state.utility_history[index]?.seller ?? 0
+    offeredPrice: entry.offer.price,
+    buyerUtility: state.utility_history[index]?.buyer ?? 0,
+    sellerUtility: state.utility_history[index]?.seller ?? 0
   })) ?? [], [state]);
   return (
     <section className="panel history-panel">
       <div className="panel-heading">
         <History size={18} />
-        <h2>Offer History</h2>
+        <h2>Offer History & Utility</h2>
       </div>
+      <p className="chart-note">
+        Price uses the left dollar axis. Buyer and seller utility use the right 0-100 score axis.
+      </p>
       {chartData.length ? (
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="round" />
-            <YAxis yAxisId="left" />
-            <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
-            <Tooltip />
+            <XAxis dataKey="round" label={{ value: "Round", position: "insideBottom", offset: -4 }} />
+            <YAxis
+              yAxisId="left"
+              tickFormatter={(value) => `$${Number(value / 1000).toFixed(0)}k`}
+              label={{ value: "Offered price", angle: -90, position: "insideLeft" }}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 100]}
+              label={{ value: "Utility score", angle: 90, position: "insideRight" }}
+            />
+            <Tooltip
+              formatter={(value, name) => {
+                if (name === "Offered price") return [`$${Number(value).toLocaleString()}`, name];
+                return [Number(value).toFixed(1), name];
+              }}
+            />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="price" stroke="#0f766e" strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="buyer" stroke="#2563eb" strokeWidth={2} />
-            <Line yAxisId="right" type="monotone" dataKey="seller" stroke="#b45309" strokeWidth={2} />
+            <Line yAxisId="left" type="monotone" dataKey="offeredPrice" name="Offered price" stroke="#0f766e" strokeWidth={2} />
+            <Line yAxisId="right" type="monotone" dataKey="buyerUtility" name="Buyer utility" stroke="#2563eb" strokeWidth={2} />
+            <Line yAxisId="right" type="monotone" dataKey="sellerUtility" name="Seller utility" stroke="#b45309" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       ) : <p className="muted">No offers recorded.</p>}

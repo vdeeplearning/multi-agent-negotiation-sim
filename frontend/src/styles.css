@@ -384,6 +384,13 @@ h3 {
   grid-column: span 3;
 }
 
+.chart-note {
+  color: #5b677a;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
 .turn {
   border-left: 4px solid #2563eb;
   padding: 12px 0 12px 14px;
