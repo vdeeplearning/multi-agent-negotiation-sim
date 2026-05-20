@@ -10,11 +10,11 @@ def test_utility_prefers_buyer_friendly_offer() -> None:
     assert compute_utilities(strong_buyer_offer, config).buyer > compute_utilities(weak_buyer_offer, config).buyer
 
 
-def test_invalid_offer_detects_hard_constraints() -> None:
+def test_reservation_miss_is_still_valid_offer() -> None:
     config = NegotiationConfig()
     offer = Offer(price=81000, delivery_days=50, warranty="standard", contract_months=12)
 
-    assert is_offer_valid(offer, config) is False
+    assert is_offer_valid(offer, config) is True
 
 
 def test_infeasible_price_config_is_explained() -> None:

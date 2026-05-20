@@ -46,10 +46,10 @@ def compute_utilities(offer: Offer, config: NegotiationConfig) -> UtilityScore:
 
 def is_offer_valid(offer: Offer, config: NegotiationConfig) -> bool:
     return (
-        offer.price <= config.buyer.maximum_acceptable_price
-        and offer.price >= config.seller.minimum_acceptable_price
-        and offer.delivery_days <= config.buyer.max_delivery_days
-        and offer.delivery_days >= config.seller.minimum_delivery_days
+        offer.price > 0
+        and offer.delivery_days > 0
+        and offer.contract_months > 0
+        and offer.warranty in WARRANTY_BUYER_VALUE
     )
 
 
@@ -92,7 +92,7 @@ def evaluate_termination(
     if latest.walk_away:
         return NegotiationStatus.WALKED_AWAY, f"{latest.agent.value.title()} walked away from the negotiation."
     if not is_offer_valid(latest.offer, config):
-        return NegotiationStatus.FAILED, "Latest offer violated one or more hard constraints."
+        return NegotiationStatus.FAILED, "Latest offer was malformed or outside the public offer schema."
     if latest.accept and utilities.buyer >= 58 and utilities.seller >= 58:
         return NegotiationStatus.ACCEPTED, "Both parties reached an acceptable utility range and accepted the contract."
     if detect_deadlock(transcript):

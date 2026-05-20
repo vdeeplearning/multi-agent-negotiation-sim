@@ -40,12 +40,7 @@ class NegotiationOrchestrator:
     def run(self) -> NegotiationState:
         infeasible_reason = validate_feasible_config(self.config)
         if infeasible_reason:
-            self.state.status = NegotiationStatus.FAILED
-            self.state.outcome_summary = infeasible_reason
-            self.state.provider_info.token_usage = self.provider.usage
             self._trace("configuration_checked", infeasible_reason)
-            self._trace("termination_condition_checked", "failed")
-            return self.state
 
         while self.state.status == NegotiationStatus.RUNNING:
             actor = self.buyer if self.state.current_round % 2 == 0 else self.seller
