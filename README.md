@@ -110,51 +110,164 @@ This repo includes a `render.yaml` Blueprint for a two-service Render deployment
 
 Render's Blueprint YAML supports `type: web` with `runtime: static` for static sites, `rootDir` for monorepos, and `staticPublishPath` for the published frontend directory. See Render's docs for [Blueprints](https://render.com/docs/blueprint-spec), [monorepo root directories](https://render.com/docs/monorepo-support), and [static sites](https://render.com/docs/static-sites).
 
-### Blueprint Deploy
+### Option A: Deploy With The Blueprint
 
-1. Push this repo to GitHub.
-2. In Render, choose **New +** then **Blueprint**.
-3. Connect `vdeeplearning/multi-agent-negotiation-sim`.
-4. Let Render read `render.yaml`.
-5. Create both services.
-6. After the backend deploys, confirm the backend URL, for example:
+This is the easiest path.
+
+1. Open the [Render Dashboard](https://dashboard.render.com/).
+2. Click **New +**.
+3. Select **Blueprint**.
+4. Connect your GitHub account if Render asks.
+5. Select the repo:
+
+```text
+vdeeplearning/multi-agent-negotiation-sim
+```
+
+6. Render should detect the root-level `render.yaml`.
+7. Click **Apply** or **Create New Resources**.
+8. Wait for both services to finish deploying:
+
+```text
+multi-agent-negotiation-api
+multi-agent-negotiation-gui
+```
+
+9. Open the backend service in Render and copy its public URL. It will look similar to:
 
 ```text
 https://multi-agent-negotiation-api.onrender.com
 ```
 
-7. In the frontend service environment, set:
+10. Test the backend health endpoint in your browser:
+
+```text
+https://multi-agent-negotiation-api.onrender.com/health
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+11. Open the frontend service in Render.
+12. Go to **Environment**.
+13. Confirm or add this environment variable:
 
 ```text
 VITE_API_URL=https://multi-agent-negotiation-api.onrender.com/api
 ```
 
-8. Redeploy the frontend if you changed `VITE_API_URL`.
+Use your actual backend URL if Render generated a different one.
 
-### Manual Render Deploy
-
-Backend web service:
+14. If you changed `VITE_API_URL`, click **Manual Deploy** then **Deploy latest commit** for the frontend service.
+15. Open the frontend service URL. It will look similar to:
 
 ```text
+https://multi-agent-negotiation-gui.onrender.com
+```
+
+16. In the GUI, choose **Mock Mode** and click **Start Negotiation**.
+
+You should see the negotiation reveal each turn with a short delay.
+
+### Option B: Create The Services Manually
+
+Use this if you do not want to use the Blueprint.
+
+#### 1. Create The Backend Service
+
+1. In Render, click **New +**.
+2. Select **Web Service**.
+3. Connect the GitHub repo.
+4. Use these settings:
+
+```text
+Name: multi-agent-negotiation-api
+Runtime: Python 3
 Root Directory: backend
 Build Command: pip install -r requirements.txt
 Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+Instance Type: Free is fine for a demo
 ```
 
-Frontend static site:
+5. Click **Create Web Service**.
+6. Wait for deploy to finish.
+7. Test:
 
 ```text
+https://<your-backend-service>.onrender.com/health
+```
+
+Expected:
+
+```json
+{"status":"ok"}
+```
+
+#### 2. Create The Frontend Static Site
+
+1. In Render, click **New +**.
+2. Select **Static Site**.
+3. Connect the same GitHub repo.
+4. Use these settings:
+
+```text
+Name: multi-agent-negotiation-gui
 Root Directory: frontend
 Build Command: npm install && npm run build
 Publish Directory: dist
-Environment Variable: VITE_API_URL=https://<your-backend-service>.onrender.com/api
 ```
 
-### Using API Tokens On Render
+5. Add this environment variable:
 
-Open the deployed frontend URL, use the **LLM Settings** panel, choose OpenAI or Anthropic, paste your API token, and click **Start Negotiation**.
+```text
+VITE_API_URL=https://<your-backend-service>.onrender.com/api
+```
+
+Example:
+
+```text
+VITE_API_URL=https://multi-agent-negotiation-api.onrender.com/api
+```
+
+6. Click **Create Static Site**.
+7. Open the frontend URL when deploy completes.
+
+### Using The Deployed GUI
+
+Once the frontend is open:
+
+1. Start with **Mock Mode**.
+2. Click **Start Negotiation**.
+3. Confirm that each buyer/seller offer appears step by step.
+4. To use a real model, choose **OpenAI** or **Anthropic** in **LLM Settings**.
+5. Paste your API key into the API key field.
+6. Select a model name.
+7. Click **Start Negotiation** again.
 
 The token is saved only in your browser's `localStorage` and sent to the backend as a temporary request header for that run. Do not put OpenAI or Anthropic keys into Render environment variables for normal demo use.
+
+### Render Troubleshooting
+
+If the GUI stays on **Contacting Backend**:
+
+1. Open the backend health URL:
+
+```text
+https://<your-backend-service>.onrender.com/health
+```
+
+2. If it does not return `{"status":"ok"}`, check the backend service logs in Render.
+3. If health works, check the frontend service environment variable:
+
+```text
+VITE_API_URL=https://<your-backend-service>.onrender.com/api
+```
+
+4. After changing `VITE_API_URL`, redeploy the frontend.
+5. On Render free instances, the backend may sleep when idle. The first request can take a little longer while it wakes up.
 
 ## Mock Mode
 
