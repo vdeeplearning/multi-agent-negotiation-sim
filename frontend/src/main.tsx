@@ -80,6 +80,7 @@ type NegotiationState = {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 const SETTINGS_KEY = "multi-agent-negotiation-sim.llmSettings";
+const TURN_DELAY_MS = 1400;
 
 const defaultConfig: NegotiationConfig = {
   buyer: {
@@ -350,6 +351,10 @@ function Transcript({ transcript }: { transcript: TranscriptEntry[] }) {
             <span>{entry.accept ? "Accepted" : entry.walk_away ? "Walked away" : "Counteroffer"}</span>
           </header>
           <p>{entry.message}</p>
+          <div className="reasoning-callout">
+            <b>Visible thinking</b>
+            <span>{entry.visible_reasoning_summary}</span>
+          </div>
           <code>{JSON.stringify(entry.offer)}</code>
         </article>
       ))}
@@ -423,10 +428,43 @@ function ProviderUsagePanel({ info }: { info?: ProviderInfo }) {
   );
 }
 
+function LiveStepPanel({
+  isReplaying,
+  visibleTurns,
+  totalTurns,
+  latestTurn
+}: {
+  isReplaying: boolean;
+  visibleTurns: number;
+  totalTurns: number;
+  latestTurn?: TranscriptEntry;
+}) {
+  return (
+    <section className="panel live-step">
+      <h2>Live Step</h2>
+      <div className={isReplaying ? "pulse-line active" : "pulse-line"} />
+      <p>
+        {isReplaying
+          ? `Revealing turn ${visibleTurns} of ${totalTurns}.`
+          : totalTurns
+            ? "Negotiation playback complete."
+            : "Start a negotiation to watch each agent turn."}
+      </p>
+      {latestTurn && (
+        <div className="live-turn">
+          <b>{latestTurn.agent} offer rationale</b>
+          <span>{latestTurn.visible_reasoning_summary}</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function App() {
   const [config, setConfig] = useState<NegotiationConfig>(defaultConfig);
   const [settings, setSettings] = useState<ProviderSettings>(defaultSettings);
   const [state, setState] = useState<NegotiationState | undefined>();
+  const [visibleTurns, setVisibleTurns] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -436,6 +474,21 @@ function App() {
       setSettings({ ...defaultSettings, ...JSON.parse(saved) });
     }
   }, []);
+
+  useEffect(() => {
+    if (!state) return;
+    setVisibleTurns(0);
+    const totalTurns = state.transcript.length;
+    let nextTurn = 0;
+    const timer = window.setInterval(() => {
+      nextTurn += 1;
+      setVisibleTurns(Math.min(nextTurn, totalTurns));
+      if (nextTurn >= totalTurns) {
+        window.clearInterval(timer);
+      }
+    }, TURN_DELAY_MS);
+    return () => window.clearInterval(timer);
+  }, [state?.negotiation_id]);
 
   const start = async () => {
     setLoading(true);
@@ -462,7 +515,8 @@ function App() {
         body: JSON.stringify({ config: effectiveConfig })
       });
       if (!response.ok) throw new Error(`API returned ${response.status}`);
-      setState(await response.json());
+      const completedState = await response.json();
+      setState(completedState);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -470,7 +524,24 @@ function App() {
     }
   };
 
-  const latestScore = state?.utility_history[state.utility_history.length - 1];
+  const visibleTranscript = state?.transcript.slice(0, visibleTurns) ?? [];
+  const visibleUtilities = state?.utility_history.slice(0, visibleTurns) ?? [];
+  const visibleTrace = state?.trace.filter((event) => event.event_type === "provider_fallback" || event.index <= visibleTurns * 5 + 1) ?? [];
+  const latestTurn = visibleTranscript[visibleTranscript.length - 1];
+  const latestScore = visibleUtilities[visibleUtilities.length - 1];
+  const isReplaying = Boolean(state && visibleTurns < state.transcript.length);
+  const visibleStatus = isReplaying ? `playing ${visibleTurns}/${state?.transcript.length ?? 0}` : state?.status.replaceAll("_", " ") ?? "ready";
+  const visibleState = state
+    ? {
+        ...state,
+        status: visibleStatus,
+        transcript: visibleTranscript,
+        utility_history: visibleUtilities,
+        trace: visibleTrace,
+        latest_offer: latestTurn?.offer,
+        outcome_summary: isReplaying ? undefined : state.outcome_summary
+      }
+    : undefined;
   return (
     <main>
       <header className="topbar">
@@ -478,7 +549,7 @@ function App() {
           <p>Applied AI Systems Demo</p>
           <h1>Multi-Agent Negotiation Simulator</h1>
         </div>
-        <div className="status-pill">{state?.status.replaceAll("_", " ") ?? "ready"}</div>
+        <div className="status-pill">{visibleStatus}</div>
       </header>
       {error && <div className="error">Backend error: {error}</div>}
       <div className="layout">
@@ -487,17 +558,23 @@ function App() {
           <ConfigPanel config={config} setConfig={setConfig} onStart={start} loading={loading} />
         </aside>
         <div className="main-grid">
-          <OfferCard offer={state?.latest_offer} />
+          <OfferCard offer={visibleState?.latest_offer} />
           <UtilityBars scores={latestScore} />
+          <LiveStepPanel
+            isReplaying={isReplaying}
+            visibleTurns={visibleTurns}
+            totalTurns={state?.transcript.length ?? 0}
+            latestTurn={latestTurn}
+          />
           <ProviderUsagePanel info={state?.provider_info} />
           <section className="panel outcome">
             <h2>Final Outcome</h2>
-            <p>{state?.outcome_summary ?? "Run a negotiation to evaluate agreement, failure, deadlock, or walk-away."}</p>
+            <p>{visibleState?.outcome_summary ?? "Run a negotiation to evaluate agreement, failure, deadlock, or walk-away."}</p>
           </section>
-          <ThinkingPanels transcript={state?.transcript ?? []} />
-          <HistoryPanel state={state} />
-          <Transcript transcript={state?.transcript ?? []} />
-          <TracePanel trace={state?.trace ?? []} />
+          <ThinkingPanels transcript={visibleTranscript} />
+          <HistoryPanel state={visibleState} />
+          <Transcript transcript={visibleTranscript} />
+          <TracePanel trace={visibleTrace} />
         </div>
       </div>
     </main>

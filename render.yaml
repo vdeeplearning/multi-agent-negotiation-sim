@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: multi-agent-negotiation-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    autoDeploy: true
+
+  - type: web
+    name: multi-agent-negotiation-gui
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        value: https://multi-agent-negotiation-api.onrender.com/api

@@ -281,6 +281,58 @@ h3 {
   background: #b45309;
 }
 
+.live-step {
+  min-height: 188px;
+}
+
+.live-step p {
+  color: #46546a;
+  margin-bottom: 12px;
+}
+
+.pulse-line {
+  background: #dde5ed;
+  border-radius: 999px;
+  height: 6px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+
+.pulse-line::after {
+  background: #0f766e;
+  content: "";
+  display: block;
+  height: 100%;
+  width: 38%;
+}
+
+.pulse-line.active::after {
+  animation: pulseSlide 1.4s ease-in-out infinite;
+}
+
+.live-turn,
+.reasoning-callout {
+  background: #f6f8fa;
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  line-height: 1.45;
+  padding: 10px;
+}
+
+.live-turn b,
+.reasoning-callout b {
+  color: #172033;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.live-turn span,
+.reasoning-callout span {
+  color: #46546a;
+}
+
 .outcome p,
 .thinking-grid p {
   color: #46546a;
@@ -327,6 +379,10 @@ h3 {
 
 .turn p {
   color: #354258;
+  margin-bottom: 8px;
+}
+
+.reasoning-callout {
   margin-bottom: 8px;
 }
 
@@ -395,5 +451,17 @@ code {
 
   .config-panel {
     max-height: none;
+  }
+}
+
+@keyframes pulseSlide {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(70%);
+  }
+  100% {
+    transform: translateX(260%);
   }
 }

@@ -11,7 +11,28 @@ The first implementation path is mock mode, so the complete demo runs without AP
 - Private agent goals and constraints separated from public negotiation history
 - Concise visible reasoning summaries without exposing hidden chain-of-thought
 - Deterministic state management, scoring, termination checks, and trace logging
+- Step-by-step observable playback with a short delay after each offer or counteroffer
 - A serious dashboard UI for inspecting offers, utilities, transcript, and orchestration events
+
+## Screenshots
+
+### Settings And Configuration
+
+The left rail contains browser-local LLM settings and private buyer/seller configuration. API keys are typed into the browser only and are never stored by the backend.
+
+![Settings and configuration](assets/screenshots/dashboard-settings.png)
+
+### Observable Negotiation Playback
+
+After the user starts a negotiation, the GUI reveals each offer or counteroffer with a delay. The **Live Step**, visible thinking panels, transcript, utility bars, chart, and trace all update as each step appears.
+
+![Live negotiation playback](assets/screenshots/live-playback.png)
+
+### Final Outcome
+
+At the end of playback, the dashboard shows the accepted, failed, deadlocked, or walk-away outcome along with provider/model metadata, token usage, approximate cost, transcript, offer history, and orchestration trace.
+
+![Final outcome](assets/screenshots/final-outcome.png)
 
 ## Architecture
 
@@ -53,10 +74,15 @@ Dockerfile
 
 ## Run Locally
 
+Prerequisites:
+
+- Python 3.11+
+- Node.js 20+ with npm
+
 ### Backend
 
 ```powershell
-cd backend
+cd C:\Users\tommy\multi-agent-negotiation-sim\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -66,12 +92,69 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ### Frontend
 
 ```powershell
-cd frontend
+cd C:\Users\tommy\multi-agent-negotiation-sim\frontend
 npm install
 npm run dev
 ```
 
 Open `http://127.0.0.1:5173`.
+
+The backend API docs are available at `http://127.0.0.1:8000/docs`.
+
+## Run On Render
+
+This repo includes a `render.yaml` Blueprint for a two-service Render deployment:
+
+- `multi-agent-negotiation-api`: FastAPI backend
+- `multi-agent-negotiation-gui`: Vite static frontend
+
+Render's Blueprint YAML supports `type: web` with `runtime: static` for static sites, `rootDir` for monorepos, and `staticPublishPath` for the published frontend directory. See Render's docs for [Blueprints](https://render.com/docs/blueprint-spec), [monorepo root directories](https://render.com/docs/monorepo-support), and [static sites](https://render.com/docs/static-sites).
+
+### Blueprint Deploy
+
+1. Push this repo to GitHub.
+2. In Render, choose **New +** then **Blueprint**.
+3. Connect `vdeeplearning/multi-agent-negotiation-sim`.
+4. Let Render read `render.yaml`.
+5. Create both services.
+6. After the backend deploys, confirm the backend URL, for example:
+
+```text
+https://multi-agent-negotiation-api.onrender.com
+```
+
+7. In the frontend service environment, set:
+
+```text
+VITE_API_URL=https://multi-agent-negotiation-api.onrender.com/api
+```
+
+8. Redeploy the frontend if you changed `VITE_API_URL`.
+
+### Manual Render Deploy
+
+Backend web service:
+
+```text
+Root Directory: backend
+Build Command: pip install -r requirements.txt
+Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Frontend static site:
+
+```text
+Root Directory: frontend
+Build Command: npm install && npm run build
+Publish Directory: dist
+Environment Variable: VITE_API_URL=https://<your-backend-service>.onrender.com/api
+```
+
+### Using API Tokens On Render
+
+Open the deployed frontend URL, use the **LLM Settings** panel, choose OpenAI or Anthropic, paste your API token, and click **Start Negotiation**.
+
+The token is saved only in your browser's `localStorage` and sent to the backend as a temporary request header for that run. Do not put OpenAI or Anthropic keys into Render environment variables for normal demo use.
 
 ## Mock Mode
 
@@ -82,6 +165,8 @@ Mock mode is the default. It uses deterministic provider logic that mimics struc
 - The orchestrator logs agent calls, model/provider use, offer parsing, evaluator updates, and termination checks.
 
 No API keys are required.
+
+Mock mode is also the graceful fallback when OpenAI or Anthropic is selected without an API key.
 
 ## LLM Settings And API Keys
 
@@ -105,6 +190,19 @@ The provider layer contains:
 - `AnthropicProvider`
 
 The response includes active provider/model metadata, token usage, and approximate cost when rates are known.
+
+## Step Observability
+
+The backend returns a structured negotiation run with transcript entries, utility scores, provider usage, and trace events. The frontend then plays that run back one turn at a time with a short delay after each buyer or seller action.
+
+Each visible step shows:
+
+- the agent's public message
+- the structured JSON offer
+- a concise visible reasoning summary
+- current buyer/seller utility scores
+- provider/model and token/cost metadata
+- orchestration trace events such as agent call, model used, offer parsed, evaluator update, and termination check
 
 ## Why This Is A Multi-Agent System
 
@@ -134,19 +232,8 @@ docker run -p 8000:8000 --env-file .env multi-agent-negotiation-sim
 
 Run the frontend locally with `npm run dev`.
 
-## Screenshots
-
-Placeholder:
-
-- Configuration panel
-- Round-by-round transcript
-- Utility and offer history
-- Orchestration trace
-- Final outcome summary
-
 ## Future Work
 
-- Real OpenAI and Anthropic structured-output adapters
 - Streaming turn execution instead of full-run POST response
 - SQLite or Postgres persistence
 - Scenario library for procurement, sales, legal, and supply-chain negotiations
