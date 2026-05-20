@@ -419,6 +419,14 @@ h3 {
   border-left-color: #b45309;
 }
 
+.turn.final {
+  background: #f8fafc;
+  border-left-color: #172033;
+  border-radius: 0 8px 8px 0;
+  margin-top: 10px;
+  padding-right: 12px;
+}
+
 .turn header {
   align-items: center;
   display: flex;
@@ -441,6 +449,34 @@ h3 {
 
 .reasoning-callout {
   margin-bottom: 8px;
+}
+
+.final-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.final-summary-grid div {
+  background: #fff;
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.final-summary-grid span {
+  color: #718094;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.final-summary-grid b {
+  color: #172033;
+  overflow-wrap: anywhere;
+  text-transform: capitalize;
 }
 
 code {
@@ -495,7 +531,8 @@ code {
   .main-grid,
   .config-grid,
   .thinking-grid,
-  .run-row {
+  .run-row,
+  .final-summary-grid {
     grid-template-columns: 1fr;
   }
 

@@ -359,7 +359,11 @@ function ThinkingPanels({ transcript }: { transcript: TranscriptEntry[] }) {
   );
 }
 
-function Transcript({ transcript }: { transcript: TranscriptEntry[] }) {
+function Transcript({ state }: { state?: NegotiationState }) {
+  const transcript = state?.transcript ?? [];
+  const latestOffer = state?.latest_offer;
+  const latestUtility = state?.utility_history[state.utility_history.length - 1];
+  const showFinalEntry = Boolean(state?.outcome_summary && latestOffer);
   return (
     <section className="panel transcript">
       <div className="panel-heading">
@@ -380,6 +384,41 @@ function Transcript({ transcript }: { transcript: TranscriptEntry[] }) {
           <code>{JSON.stringify(entry.offer)}</code>
         </article>
       ))}
+      {showFinalEntry && latestOffer && (
+        <article className={`turn final ${state?.status}`}>
+          <header>
+            <b>Final Result: {formatStatus(state?.status ?? "")}</b>
+            <span>{state?.status === "accepted" ? "Agreement reached" : "No agreement"}</span>
+          </header>
+          <p>{state?.outcome_summary}</p>
+          <div className="final-summary-grid">
+            <div>
+              <span>Final offered price</span>
+              <b>${latestOffer.price.toLocaleString()}</b>
+            </div>
+            <div>
+              <span>Delivery</span>
+              <b>{latestOffer.delivery_days} days</b>
+            </div>
+            <div>
+              <span>Warranty</span>
+              <b>{latestOffer.warranty}</b>
+            </div>
+            <div>
+              <span>Contract</span>
+              <b>{latestOffer.contract_months} months</b>
+            </div>
+            <div>
+              <span>Buyer utility</span>
+              <b>{latestUtility?.buyer ?? "n/a"}</b>
+            </div>
+            <div>
+              <span>Seller utility</span>
+              <b>{latestUtility?.seller ?? "n/a"}</b>
+            </div>
+          </div>
+        </article>
+      )}
     </section>
   );
 }
@@ -631,7 +670,7 @@ function App() {
           </section>
           <ThinkingPanels transcript={visibleTranscript} />
           <HistoryPanel state={visibleState} />
-          <Transcript transcript={visibleTranscript} />
+          <Transcript state={visibleState} />
           <TracePanel trace={visibleTrace} />
         </div>
       </div>
@@ -659,6 +698,10 @@ function getCompatibilityWarning(config: NegotiationConfig): string | undefined 
 function clampRounds(value: number): number {
   if (Number.isNaN(value)) return MIN_ROUNDS;
   return Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, Math.round(value)));
+}
+
+function formatStatus(status: string): string {
+  return status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
