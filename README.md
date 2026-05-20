@@ -335,6 +335,41 @@ Each visible step shows:
 - provider/model and token/cost metadata
 - orchestration trace events such as agent call, model used, offer parsed, evaluator update, and termination check
 
+## What Utility Means
+
+Utility is a deterministic 0-100 score that estimates how good the current offer is for each party.
+
+It is not a dollar amount, probability, or LLM confidence score. It is a structured evaluation score computed by the backend evaluator after every offer.
+
+Buyer utility rewards offers that are closer to the buyer's private goals:
+
+- lower price
+- faster delivery
+- stronger warranty
+- preferred contract length
+
+Seller utility rewards offers that are closer to the seller's private goals:
+
+- higher price
+- operationally feasible delivery timing
+- lower warranty burden
+- preferred contract length
+
+The two utility scores can move in opposite directions. For example, a lower price usually improves buyer utility and reduces seller utility.
+
+The evaluator uses utility to:
+
+- show whether an offer is becoming more balanced
+- recommend acceptance when both utilities are high enough
+- help explain why an agreement, deadlock, walk-away, or max-rounds outcome occurred
+
+In the **Offer History & Utility** chart:
+
+- **Offered price** uses the left dollar axis
+- **Buyer utility** and **Seller utility** use the right 0-100 score axis
+
+This is why the chart has one price curve and two utility curves.
+
 ## Why This Is A Multi-Agent System
 
 The buyer and seller are separate agents with different roles, private objectives, constraints, and negotiation styles. They do not share hidden goals. The orchestrator uses a LangGraph `StateGraph` to control preflight checks, turn order, state transitions, and termination. Each agent independently produces a structured offer and public message from its own perspective. The evaluator then deterministically scores the offer and decides whether the negotiation should continue, recommend acceptance, accept, fail, deadlock, or stop.
