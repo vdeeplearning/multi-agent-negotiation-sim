@@ -192,6 +192,12 @@ Start Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 Instance Type: Free is fine for a demo
 ```
 
+Recommended backend environment variable:
+
+```text
+PYTHON_VERSION=3.12.13
+```
+
 5. Click **Create Web Service**.
 6. Wait for deploy to finish.
 7. Test:
