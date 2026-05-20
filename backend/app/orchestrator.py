@@ -1,5 +1,5 @@
 from app.agents import NegotiationAgent
-from app.evaluator import compute_utilities, evaluate_termination
+from app.evaluator import compute_utilities, evaluate_termination, validate_feasible_config
 from app.providers import get_provider
 from app.schemas import (
     AgentRole,
@@ -38,6 +38,15 @@ class NegotiationOrchestrator:
             self._trace("provider_fallback", self.runtime.fallback_reason)
 
     def run(self) -> NegotiationState:
+        infeasible_reason = validate_feasible_config(self.config)
+        if infeasible_reason:
+            self.state.status = NegotiationStatus.FAILED
+            self.state.outcome_summary = infeasible_reason
+            self.state.provider_info.token_usage = self.provider.usage
+            self._trace("configuration_checked", infeasible_reason)
+            self._trace("termination_condition_checked", "failed")
+            return self.state
+
         while self.state.status == NegotiationStatus.RUNNING:
             actor = self.buyer if self.state.current_round % 2 == 0 else self.seller
             round_number = self.state.current_round + 1

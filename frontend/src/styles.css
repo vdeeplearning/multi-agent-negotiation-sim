@@ -150,7 +150,7 @@ h3 {
 }
 
 .config-run-row {
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 110px 140px 1fr;
 }
 
 .primary {
@@ -171,6 +171,37 @@ h3 {
 .primary:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.secondary {
+  align-items: center;
+  background: #eef2f6;
+  border: 1px solid #cfd7e2;
+  border-radius: 6px;
+  color: #263448;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+}
+
+.secondary:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.config-warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-bottom: 16px;
+  padding: 10px 12px;
 }
 
 .main-grid {

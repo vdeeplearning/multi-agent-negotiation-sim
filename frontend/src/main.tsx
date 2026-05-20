@@ -149,12 +149,14 @@ function ConfigPanel({
   config,
   setConfig,
   onStart,
-  loading
+  loading,
+  compatibilityWarning
 }: {
   config: NegotiationConfig;
   setConfig: (config: NegotiationConfig) => void;
   onStart: () => void;
   loading: boolean;
+  compatibilityWarning?: string;
 }) {
   const updateAgent = (role: Role, key: string, value: string | number) => {
     setConfig({ ...config, [role]: { ...config[role], [key]: value } });
@@ -169,6 +171,7 @@ function ConfigPanel({
         <span>Scenario</span>
         <input value={config.scenario} onChange={(event) => setConfig({ ...config, scenario: event.target.value })} />
       </label>
+      {compatibilityWarning && <div className="config-warning">{compatibilityWarning}</div>}
       <div className="config-grid">
         <div>
           <h3>Buyer Private Config</h3>
@@ -198,7 +201,10 @@ function ConfigPanel({
           <span>Max rounds</span>
           <input type="number" value={config.max_rounds} onChange={(event) => setConfig({ ...config, max_rounds: Number(event.target.value) })} />
         </label>
-        <button className="primary" onClick={onStart} disabled={loading}>
+        <button className="secondary" onClick={() => setConfig(defaultConfig)} disabled={loading} type="button">
+          Reset Defaults
+        </button>
+        <button className="primary" onClick={onStart} disabled={loading || Boolean(compatibilityWarning)}>
           <Play size={17} />
           {loading ? "Contacting Backend" : "Start Negotiation"}
         </button>
@@ -492,6 +498,10 @@ function App() {
   }, [state?.negotiation_id]);
 
   const start = async () => {
+    if (compatibilityWarning) {
+      setError(compatibilityWarning);
+      return;
+    }
     setLoading(true);
     setError(undefined);
     const controller = new AbortController();
@@ -552,6 +562,7 @@ function App() {
         outcome_summary: isReplaying ? undefined : state.outcome_summary
       }
     : undefined;
+  const compatibilityWarning = getCompatibilityWarning(config);
   return (
     <main>
       <header className="topbar">
@@ -565,7 +576,13 @@ function App() {
       <div className="layout">
         <aside className="side-stack">
           <SettingsPanel settings={settings} setSettings={setSettings} activeInfo={state?.provider_info} />
-          <ConfigPanel config={config} setConfig={setConfig} onStart={start} loading={loading} />
+          <ConfigPanel
+            config={config}
+            setConfig={setConfig}
+            onStart={start}
+            loading={loading}
+            compatibilityWarning={compatibilityWarning}
+          />
         </aside>
         <div className="main-grid">
           <OfferCard offer={visibleState?.latest_offer} />
@@ -589,6 +606,20 @@ function App() {
       </div>
     </main>
   );
+}
+
+function getCompatibilityWarning(config: NegotiationConfig): string | undefined {
+  const buyerMaxPrice = Number(config.buyer.maximum_acceptable_price);
+  const sellerMinPrice = Number(config.seller.minimum_acceptable_price);
+  if (sellerMinPrice > buyerMaxPrice) {
+    return `No feasible price range: seller minimum price ($${sellerMinPrice.toLocaleString()}) is above buyer maximum price ($${buyerMaxPrice.toLocaleString()}). Lower seller minimum or raise buyer maximum.`;
+  }
+  const buyerMaxDelivery = Number(config.buyer.max_delivery_days);
+  const sellerMinDelivery = Number(config.seller.minimum_delivery_days);
+  if (sellerMinDelivery > buyerMaxDelivery) {
+    return `No feasible delivery range: seller minimum delivery (${sellerMinDelivery} days) is above buyer maximum delivery (${buyerMaxDelivery} days).`;
+  }
+  return undefined;
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

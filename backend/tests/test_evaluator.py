@@ -1,5 +1,5 @@
-from app.evaluator import compute_utilities, detect_deadlock, evaluate_termination, is_offer_valid
-from app.schemas import AgentRole, NegotiationConfig, NegotiationStatus, Offer, TranscriptEntry
+from app.evaluator import compute_utilities, detect_deadlock, evaluate_termination, is_offer_valid, validate_feasible_config
+from app.schemas import AgentRole, NegotiationConfig, NegotiationStatus, Offer, SellerConfig, TranscriptEntry
 
 
 def test_utility_prefers_buyer_friendly_offer() -> None:
@@ -15,6 +15,15 @@ def test_invalid_offer_detects_hard_constraints() -> None:
     offer = Offer(price=81000, delivery_days=50, warranty="standard", contract_months=12)
 
     assert is_offer_valid(offer, config) is False
+
+
+def test_infeasible_price_config_is_explained() -> None:
+    config = NegotiationConfig(seller=SellerConfig(minimum_acceptable_price=104000))
+
+    reason = validate_feasible_config(config)
+
+    assert reason is not None
+    assert "No feasible price range" in reason
 
 
 def test_acceptance_requires_valid_offer_and_utility() -> None:
@@ -55,4 +64,3 @@ def test_deadlock_detects_low_movement_recent_offers() -> None:
     ]
 
     assert detect_deadlock(transcript) is True
-

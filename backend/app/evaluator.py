@@ -53,6 +53,22 @@ def is_offer_valid(offer: Offer, config: NegotiationConfig) -> bool:
     )
 
 
+def validate_feasible_config(config: NegotiationConfig) -> str | None:
+    if config.seller.minimum_acceptable_price > config.buyer.maximum_acceptable_price:
+        return (
+            "No feasible price range: seller minimum acceptable price "
+            f"(${config.seller.minimum_acceptable_price:,.0f}) exceeds buyer maximum acceptable price "
+            f"(${config.buyer.maximum_acceptable_price:,.0f})."
+        )
+    if config.seller.minimum_delivery_days > config.buyer.max_delivery_days:
+        return (
+            "No feasible delivery range: seller minimum delivery days "
+            f"({config.seller.minimum_delivery_days}) exceeds buyer maximum delivery days "
+            f"({config.buyer.max_delivery_days})."
+        )
+    return None
+
+
 def detect_deadlock(transcript: list[TranscriptEntry]) -> bool:
     if len(transcript) < 4:
         return False
@@ -84,4 +100,3 @@ def evaluate_termination(
     if latest.round_number >= config.max_rounds:
         return NegotiationStatus.MAX_ROUNDS, "Maximum rounds reached without mutual acceptance."
     return NegotiationStatus.RUNNING, None
-
