@@ -57,6 +57,7 @@ class NegotiationConfig(BaseModel):
     seller: SellerConfig = Field(default_factory=SellerConfig)
     max_rounds: int = Field(default=8, ge=2, le=20)
     provider: str = "mock"
+    model_name: str = "mock-negotiator-v1"
     scenario: str = "Cloud GPU capacity contract for a mid-market AI platform team."
 
 
@@ -92,6 +93,21 @@ class UtilityScore(BaseModel):
     seller: float = Field(ge=0, le=100)
 
 
+class TokenUsage(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    approximate_cost_usd: float | None = None
+
+
+class ProviderRunInfo(BaseModel):
+    requested_provider: str = "mock"
+    active_provider: str = "mock"
+    model_name: str = "mock-negotiator-v1"
+    fallback_reason: str | None = None
+    token_usage: TokenUsage = Field(default_factory=TokenUsage)
+
+
 class TraceEvent(BaseModel):
     index: int
     event_type: str
@@ -108,9 +124,17 @@ class NegotiationState(BaseModel):
     transcript: list[TranscriptEntry] = Field(default_factory=list)
     utility_history: list[UtilityScore] = Field(default_factory=list)
     trace: list[TraceEvent] = Field(default_factory=list)
+    provider_info: ProviderRunInfo = Field(default_factory=ProviderRunInfo)
     outcome_summary: str | None = None
 
 
 class StartNegotiationRequest(BaseModel):
     config: NegotiationConfig = Field(default_factory=NegotiationConfig)
 
+
+class ProviderRuntimeConfig(BaseModel):
+    requested_provider: str = "mock"
+    active_provider: str = "mock"
+    model_name: str = "mock-negotiator-v1"
+    api_key: str | None = None
+    fallback_reason: str | None = None

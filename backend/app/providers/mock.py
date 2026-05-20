@@ -1,20 +1,24 @@
 from typing import Any
 
-from app.providers.base import LLMProvider
-from app.schemas import AgentResponse, AgentRole, BuyerConfig, Offer, SellerConfig
+from app.providers.base import BaseLLMProvider
+from app.schemas import AgentResponse, AgentRole, BuyerConfig, Offer, SellerConfig, TokenUsage
 
 
-class MockProvider(LLMProvider):
+class MockProvider(BaseLLMProvider):
     """Deterministic provider that mimics structured LLM responses."""
 
-    def __init__(self, provider_name: str = "mock") -> None:
-        self.name = f"{provider_name}-mock-adapter"
+    def __init__(self, model_name: str = "mock-negotiator-v1", provider_name: str = "mock") -> None:
+        self.provider = "mock"
+        self.model_name = model_name or "mock-negotiator-v1"
+        self.name = f"{provider_name}-mock-adapter ({self.model_name})"
+        self.usage = TokenUsage()
 
     def complete_agent_turn(self, payload: dict[str, Any]) -> AgentResponse:
         role: AgentRole = payload["role"]
         round_number: int = payload["round_number"]
         max_rounds: int = payload["max_rounds"]
         latest_offer: Offer | None = payload.get("latest_offer")
+        self.add_usage(input_tokens=420 + len(payload.get("public_history", [])) * 110, output_tokens=145)
         if role == AgentRole.BUYER:
             return self._buyer_turn(payload["private_config"], latest_offer, round_number, max_rounds)
         return self._seller_turn(payload["private_config"], latest_offer, round_number, max_rounds)

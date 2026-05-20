@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, Brain, CheckCircle2, Gauge, History, Play, Settings2, Workflow } from "lucide-react";
+import { Activity, Brain, CheckCircle2, Gauge, History, KeyRound, Play, Settings2, Workflow } from "lucide-react";
 import {
   CartesianGrid,
   Legend,
@@ -30,6 +30,7 @@ type NegotiationConfig = {
   seller: AgentConfig;
   max_rounds: number;
   provider: string;
+  model_name: string;
   scenario: string;
 };
 
@@ -45,6 +46,24 @@ type TranscriptEntry = {
 
 type UtilityScore = { buyer: number; seller: number };
 type TraceEvent = { index: number; event_type: string; detail: string; actor?: Role };
+type ProviderChoice = "mock" | "openai" | "anthropic";
+type ProviderSettings = {
+  provider: ProviderChoice;
+  apiKey: string;
+  modelName: string;
+};
+type ProviderInfo = {
+  requested_provider: string;
+  active_provider: string;
+  model_name: string;
+  fallback_reason?: string;
+  token_usage: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    approximate_cost_usd?: number;
+  };
+};
 
 type NegotiationState = {
   negotiation_id: string;
@@ -55,10 +74,12 @@ type NegotiationState = {
   transcript: TranscriptEntry[];
   utility_history: UtilityScore[];
   trace: TraceEvent[];
+  provider_info: ProviderInfo;
   outcome_summary?: string;
 };
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
+const SETTINGS_KEY = "multi-agent-negotiation-sim.llmSettings";
 
 const defaultConfig: NegotiationConfig = {
   buyer: {
@@ -83,7 +104,20 @@ const defaultConfig: NegotiationConfig = {
   },
   max_rounds: 8,
   provider: "mock",
+  model_name: "mock-negotiator-v1",
   scenario: "Cloud GPU capacity contract for a mid-market AI platform team."
+};
+
+const defaultSettings: ProviderSettings = {
+  provider: "mock",
+  apiKey: "",
+  modelName: "mock-negotiator-v1"
+};
+
+const providerModels: Record<ProviderChoice, string[]> = {
+  mock: ["mock-negotiator-v1"],
+  openai: ["gpt-4o-mini", "gpt-4o"],
+  anthropic: ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"]
 };
 
 function Field({
@@ -157,23 +191,91 @@ function ConfigPanel({
           <Field label="Hidden priority" type="text" value={config.seller.hidden_priority} onChange={(v) => updateAgent("seller", "hidden_priority", v)} />
         </div>
       </div>
-      <div className="run-row">
+      <div className="run-row config-run-row">
         <label className="field compact">
           <span>Max rounds</span>
           <input type="number" value={config.max_rounds} onChange={(event) => setConfig({ ...config, max_rounds: Number(event.target.value) })} />
-        </label>
-        <label className="field compact">
-          <span>Provider</span>
-          <select value={config.provider} onChange={(event) => setConfig({ ...config, provider: event.target.value })}>
-            <option value="mock">mock</option>
-            <option value="openai">openai</option>
-            <option value="anthropic">anthropic</option>
-          </select>
         </label>
         <button className="primary" onClick={onStart} disabled={loading}>
           <Play size={17} />
           {loading ? "Running" : "Start Negotiation"}
         </button>
+      </div>
+    </section>
+  );
+}
+
+function SettingsPanel({
+  settings,
+  setSettings,
+  activeInfo
+}: {
+  settings: ProviderSettings;
+  setSettings: (settings: ProviderSettings) => void;
+  activeInfo?: ProviderInfo;
+}) {
+  const update = (next: ProviderSettings) => {
+    setSettings(next);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+  };
+  const setProvider = (provider: ProviderChoice) => {
+    update({
+      provider,
+      apiKey: provider === settings.provider ? settings.apiKey : "",
+      modelName: providerModels[provider][0]
+    });
+  };
+  return (
+    <section className="panel settings-panel">
+      <div className="panel-heading">
+        <KeyRound size={18} />
+        <h2>LLM Settings</h2>
+      </div>
+      <div className="segmented">
+        {[
+          ["mock", "Mock Mode"],
+          ["openai", "OpenAI"],
+          ["anthropic", "Anthropic"]
+        ].map(([value, label]) => (
+          <button
+            key={value}
+            className={settings.provider === value ? "selected" : ""}
+            onClick={() => setProvider(value as ProviderChoice)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <label className="field">
+        <span>Model name</span>
+        <input
+          list="model-options"
+          value={settings.modelName}
+          onChange={(event) => update({ ...settings, modelName: event.target.value })}
+        />
+        <datalist id="model-options">
+          {providerModels[settings.provider].map((model) => <option value={model} key={model} />)}
+        </datalist>
+      </label>
+      <label className="field">
+        <span>API key</span>
+        <input
+          type="password"
+          autoComplete="off"
+          placeholder={settings.provider === "mock" ? "Not required for mock mode" : "Stored only in this browser"}
+          disabled={settings.provider === "mock"}
+          value={settings.apiKey}
+          onChange={(event) => update({ ...settings, apiKey: event.target.value })}
+        />
+      </label>
+      <p className="settings-note">
+        Keys are saved only in browser localStorage and sent as temporary request headers.
+      </p>
+      <div className="active-provider">
+        <span>Active</span>
+        <b>{activeInfo ? `${activeInfo.active_provider} / ${activeInfo.model_name}` : `${settings.provider} / ${settings.modelName}`}</b>
+        {activeInfo?.fallback_reason && <p>{activeInfo.fallback_reason}</p>}
       </div>
     </section>
   );
@@ -218,15 +320,16 @@ function UtilityBars({ scores }: { scores?: UtilityScore }) {
 function ThinkingPanels({ transcript }: { transcript: TranscriptEntry[] }) {
   const buyer = [...transcript].reverse().find((entry) => entry.agent === "buyer");
   const seller = [...transcript].reverse().find((entry) => entry.agent === "seller");
+  const summaries: Array<[string, TranscriptEntry | undefined]> = [["Buyer", buyer], ["Seller", seller]];
   return (
     <section className="thinking-grid">
-      {[["Buyer", buyer], ["Seller", seller]].map(([label, entry]) => (
-        <div className="panel" key={label as string}>
+      {summaries.map(([label, entry]) => (
+        <div className="panel" key={label}>
           <div className="panel-heading">
             <Brain size={18} />
             <h2>{label} Visible Thinking</h2>
           </div>
-          <p>{(entry as TranscriptEntry | undefined)?.visible_reasoning_summary ?? "Waiting for agent turn."}</p>
+          <p>{entry?.visible_reasoning_summary ?? "Waiting for agent turn."}</p>
         </div>
       ))}
     </section>
@@ -304,20 +407,59 @@ function TracePanel({ trace }: { trace: TraceEvent[] }) {
   );
 }
 
+function ProviderUsagePanel({ info }: { info?: ProviderInfo }) {
+  const usage = info?.token_usage;
+  return (
+    <section className="panel provider-panel">
+      <h2>Provider & Cost</h2>
+      <div className="provider-metrics">
+        <div><span>Requested</span><b>{info?.requested_provider ?? "mock"}</b></div>
+        <div><span>Active</span><b>{info?.active_provider ?? "mock"}</b></div>
+        <div><span>Model</span><b>{info?.model_name ?? "mock-negotiator-v1"}</b></div>
+        <div><span>Tokens</span><b>{usage?.total_tokens ?? 0}</b></div>
+        <div><span>Approx. cost</span><b>{usage?.approximate_cost_usd == null ? "n/a" : `$${usage.approximate_cost_usd.toFixed(6)}`}</b></div>
+      </div>
+    </section>
+  );
+}
+
 function App() {
   const [config, setConfig] = useState<NegotiationConfig>(defaultConfig);
+  const [settings, setSettings] = useState<ProviderSettings>(defaultSettings);
   const [state, setState] = useState<NegotiationState | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  useEffect(() => {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) {
+      setSettings({ ...defaultSettings, ...JSON.parse(saved) });
+    }
+  }, []);
+
   const start = async () => {
     setLoading(true);
     setError(undefined);
+    const provider = settings.provider;
+    const effectiveProvider = provider !== "mock" && !settings.apiKey ? "mock" : provider;
+    const effectiveConfig = {
+      ...config,
+      provider: effectiveProvider,
+      model_name: provider === effectiveProvider ? settings.modelName : "mock-negotiator-v1"
+    };
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-LLM-Provider": provider,
+      "X-LLM-Model": settings.modelName
+    };
+    if (settings.apiKey) {
+      headers["X-LLM-API-Key"] = settings.apiKey;
+    }
     try {
       const response = await fetch(`${API_URL}/negotiations/start`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ config })
+        headers,
+        body: JSON.stringify({ config: effectiveConfig })
       });
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       setState(await response.json());
@@ -328,7 +470,7 @@ function App() {
     }
   };
 
-  const latestScore = state?.utility_history.at(-1);
+  const latestScore = state?.utility_history[state.utility_history.length - 1];
   return (
     <main>
       <header className="topbar">
@@ -340,10 +482,14 @@ function App() {
       </header>
       {error && <div className="error">Backend error: {error}</div>}
       <div className="layout">
-        <ConfigPanel config={config} setConfig={setConfig} onStart={start} loading={loading} />
+        <aside className="side-stack">
+          <SettingsPanel settings={settings} setSettings={setSettings} activeInfo={state?.provider_info} />
+          <ConfigPanel config={config} setConfig={setConfig} onStart={start} loading={loading} />
+        </aside>
         <div className="main-grid">
           <OfferCard offer={state?.latest_offer} />
           <UtilityBars scores={latestScore} />
+          <ProviderUsagePanel info={state?.provider_info} />
           <section className="panel outcome">
             <h2>Final Outcome</h2>
             <p>{state?.outcome_summary ?? "Run a negotiation to evaluate agreement, failure, deadlock, or walk-away."}</p>

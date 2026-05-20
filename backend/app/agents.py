@@ -1,9 +1,9 @@
-from app.providers.base import LLMProvider
+from app.providers.base import BaseLLMProvider
 from app.schemas import AgentResponse, AgentRole, NegotiationConfig, Offer, TranscriptEntry
 
 
 class NegotiationAgent:
-    def __init__(self, role: AgentRole, provider: LLMProvider) -> None:
+    def __init__(self, role: AgentRole, provider: BaseLLMProvider) -> None:
         self.role = role
         self.provider = provider
 
@@ -29,4 +29,3 @@ class NegotiationAgent:
             "scenario": config.scenario,
         }
         return self.provider.complete_agent_turn(payload)
-

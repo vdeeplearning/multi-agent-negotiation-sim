@@ -4,6 +4,8 @@ from app.providers import get_provider
 from app.schemas import (
     AgentRole,
     NegotiationConfig,
+    ProviderRunInfo,
+    ProviderRuntimeConfig,
     NegotiationState,
     NegotiationStatus,
     TraceEvent,
@@ -12,12 +14,28 @@ from app.schemas import (
 
 
 class NegotiationOrchestrator:
-    def __init__(self, config: NegotiationConfig) -> None:
+    def __init__(self, config: NegotiationConfig, runtime: ProviderRuntimeConfig | None = None) -> None:
         self.config = config
-        self.provider = get_provider(config.provider)
+        self.runtime = runtime or ProviderRuntimeConfig(
+            requested_provider=config.provider,
+            active_provider=config.provider,
+            model_name=config.model_name,
+        )
+        self.provider = get_provider(self.runtime)
         self.buyer = NegotiationAgent(AgentRole.BUYER, self.provider)
         self.seller = NegotiationAgent(AgentRole.SELLER, self.provider)
-        self.state = NegotiationState(config=config, status=NegotiationStatus.RUNNING)
+        self.state = NegotiationState(
+            config=config,
+            status=NegotiationStatus.RUNNING,
+            provider_info=ProviderRunInfo(
+                requested_provider=self.runtime.requested_provider,
+                active_provider=self.runtime.active_provider,
+                model_name=self.runtime.model_name,
+                fallback_reason=self.runtime.fallback_reason,
+            ),
+        )
+        if self.runtime.fallback_reason:
+            self._trace("provider_fallback", self.runtime.fallback_reason)
 
     def run(self) -> NegotiationState:
         while self.state.status == NegotiationStatus.RUNNING:
@@ -57,6 +75,7 @@ class NegotiationOrchestrator:
 
             status, summary = evaluate_termination(self.state.transcript, utilities, self.config)
             self.state.status = status
+            self.state.provider_info.token_usage = self.provider.usage
             self._trace("termination_condition_checked", status.value, actor.role)
             if summary:
                 self.state.outcome_summary = summary
@@ -72,4 +91,3 @@ class NegotiationOrchestrator:
                 actor=actor,
             )
         )
-

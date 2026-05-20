@@ -83,16 +83,28 @@ Mock mode is the default. It uses deterministic provider logic that mimics struc
 
 No API keys are required.
 
-## API Key Mode
+## LLM Settings And API Keys
 
-The provider abstraction currently accepts `mock`, `openai`, and `anthropic` provider names, with non-mock names routed through the mock adapter until real adapters are filled in. To add real providers:
+The dashboard includes an **LLM Settings** panel where users can choose Mock Mode, OpenAI, or Anthropic, enter an API key, and select a model name. Settings are saved in browser `localStorage` only.
 
-1. Add `OpenAIProvider` or `AnthropicProvider` under `backend/app/providers/`.
-2. Implement `complete_agent_turn()` to call the model with structured JSON output.
-3. Update `get_provider()` in `backend/app/providers/__init__.py`.
-4. Set provider and keys in environment variables.
+API keys are not written to the backend store. For a negotiation run, the frontend sends temporary headers:
 
-Suggested environment variables are shown in `.env.example`.
+```text
+X-LLM-Provider: mock|openai|anthropic
+X-LLM-Model: gpt-4o-mini
+X-LLM-API-Key: temporary browser key
+```
+
+If OpenAI or Anthropic is selected without an API key, the backend gracefully falls back to Mock Mode and returns a fallback note in `provider_info`.
+
+The provider layer contains:
+
+- `BaseLLMProvider`
+- `MockProvider`
+- `OpenAIProvider`
+- `AnthropicProvider`
+
+The response includes active provider/model metadata, token usage, and approximate cost when rates are known.
 
 ## Why This Is A Multi-Agent System
 
@@ -141,4 +153,3 @@ Placeholder:
 - Exportable negotiation reports
 - Human-in-the-loop approval at key concession thresholds
 - Comparative runs across different negotiation styles and model providers
-

@@ -95,10 +95,16 @@ h3 {
   margin-bottom: 16px;
 }
 
-.config-panel {
+.side-stack {
   align-self: start;
+  display: grid;
+  gap: 18px;
   max-height: calc(100vh - 124px);
   overflow: auto;
+}
+
+.config-panel {
+  align-self: start;
 }
 
 .config-grid {
@@ -143,6 +149,10 @@ h3 {
   margin-top: 8px;
 }
 
+.config-run-row {
+  grid-template-columns: 120px 1fr;
+}
+
 .primary {
   align-items: center;
   background: #0f766e;
@@ -167,6 +177,73 @@ h3 {
   display: grid;
   gap: 18px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.segmented {
+  background: #eef2f6;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 14px;
+  padding: 4px;
+}
+
+.segmented button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #536076;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 34px;
+}
+
+.segmented button.selected {
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(22, 32, 51, 0.08);
+  color: #0f766e;
+}
+
+.settings-note {
+  color: #718094;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.active-provider {
+  background: #f4f7f9;
+  border: 1px solid #e2e8ef;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.active-provider span,
+.provider-metrics span {
+  color: #718094;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.active-provider b,
+.provider-metrics b {
+  overflow-wrap: anywhere;
+}
+
+.active-provider p {
+  color: #9a5b13;
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 8px 0 0;
+}
+
+.provider-metrics {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .offer-grid {
