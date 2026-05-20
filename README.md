@@ -198,6 +198,8 @@ Recommended backend environment variable:
 PYTHON_VERSION=3.12.13
 ```
 
+The repo also includes `.python-version` files pinned to `3.12.13`. Render's Python docs say `PYTHON_VERSION` has highest precedence, followed by a repo-root `.python-version` file.
+
 5. Click **Create Web Service**.
 6. Wait for deploy to finish.
 7. Test:
