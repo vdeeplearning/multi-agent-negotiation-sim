@@ -4,6 +4,14 @@ A polished full-stack demo of two LLM-style agents negotiating a cloud GPU capac
 
 The first implementation path is mock mode, so the complete demo runs without API keys. The provider layer is intentionally isolated so OpenAI, Anthropic, or other structured-output model adapters can be added without changing orchestration, evaluation, or UI code.
 
+## Live Demo
+
+- GUI: [https://multi-agent-negotiation-gui.onrender.com](https://multi-agent-negotiation-gui.onrender.com)
+- Backend API: [https://multi-agent-negotiation-api.onrender.com](https://multi-agent-negotiation-api.onrender.com)
+- Backend health check: [https://multi-agent-negotiation-api.onrender.com/health](https://multi-agent-negotiation-api.onrender.com/health)
+
+Render free instances can spin down when idle, so the first backend request may take 50 seconds or more.
+
 ## What It Demonstrates
 
 - LLM-driven multi-agent orchestration pattern with alternating buyer/seller turns
