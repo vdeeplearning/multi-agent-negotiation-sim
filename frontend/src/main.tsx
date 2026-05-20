@@ -297,7 +297,7 @@ function SettingsPanel({
   );
 }
 
-function OfferCard({ offer }: { offer?: Offer }) {
+function OfferCard({ offer, turn }: { offer?: Offer; turn?: TranscriptEntry }) {
   return (
     <section className="panel offer-card">
       <div className="panel-heading">
@@ -305,11 +305,18 @@ function OfferCard({ offer }: { offer?: Offer }) {
         <h2>Current Offer</h2>
       </div>
       {offer ? (
-        <div className="offer-grid">
-          <strong>${offer.price.toLocaleString()}</strong>
-          <span>{offer.delivery_days} days</span>
-          <span>{offer.warranty} warranty</span>
-          <span>{offer.contract_months} months</span>
+        <div>
+          {turn && (
+            <div className={`offer-origin ${turn.agent}`}>
+              Round {turn.round_number} offer from {turn.agent}
+            </div>
+          )}
+          <div className="offer-grid">
+            <strong>${offer.price.toLocaleString()}</strong>
+            <span>{offer.delivery_days} days</span>
+            <span>{offer.warranty} warranty</span>
+            <span>{offer.contract_months} months</span>
+          </div>
         </div>
       ) : (
         <p className="muted">No active offer yet.</p>
@@ -609,7 +616,7 @@ function App() {
           />
         </aside>
         <div className="main-grid">
-          <OfferCard offer={visibleState?.latest_offer} />
+          <OfferCard offer={visibleState?.latest_offer} turn={latestTurn} />
           <UtilityBars scores={latestScore} />
           <LiveStepPanel
             isReplaying={isReplaying}

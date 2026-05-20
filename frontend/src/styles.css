@@ -282,6 +282,25 @@ h3 {
   gap: 10px;
 }
 
+.offer-origin {
+  background: #eaf2ff;
+  border: 1px solid #cfe0ff;
+  border-radius: 999px;
+  color: #1d4ed8;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  padding: 5px 9px;
+  text-transform: capitalize;
+}
+
+.offer-origin.seller {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #b45309;
+}
+
 .offer-grid strong {
   color: #0f766e;
   font-size: 28px;
