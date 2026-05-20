@@ -82,6 +82,8 @@ const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 const SETTINGS_KEY = "multi-agent-negotiation-sim.llmSettings";
 const TURN_DELAY_MS = 1400;
 const NEGOTIATION_TIMEOUT_MS = 90000;
+const MIN_ROUNDS = 2;
+const MAX_ROUNDS = 50;
 
 const defaultConfig: NegotiationConfig = {
   buyer: {
@@ -199,7 +201,13 @@ function ConfigPanel({
       <div className="run-row config-run-row">
         <label className="field compact">
           <span>Max rounds</span>
-          <input type="number" value={config.max_rounds} onChange={(event) => setConfig({ ...config, max_rounds: Number(event.target.value) })} />
+          <input
+            type="number"
+            min={MIN_ROUNDS}
+            max={MAX_ROUNDS}
+            value={config.max_rounds}
+            onChange={(event) => setConfig({ ...config, max_rounds: clampRounds(Number(event.target.value)) })}
+          />
         </label>
         <button className="secondary" onClick={() => setConfig(defaultConfig)} disabled={loading} type="button">
           Reset Defaults
@@ -541,7 +549,10 @@ function App() {
         body: JSON.stringify({ config: effectiveConfig }),
         signal: controller.signal
       });
-      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`API returned ${response.status}${detail ? `: ${detail}` : ""}`);
+      }
       const completedState = await response.json();
       setState(completedState);
     } catch (err) {
@@ -622,6 +633,9 @@ function App() {
 }
 
 function getCompatibilityWarning(config: NegotiationConfig): string | undefined {
+  if (config.max_rounds < MIN_ROUNDS || config.max_rounds > MAX_ROUNDS) {
+    return `Max rounds must be between ${MIN_ROUNDS} and ${MAX_ROUNDS}.`;
+  }
   const buyerMaxPrice = Number(config.buyer.maximum_acceptable_price);
   const sellerMinPrice = Number(config.seller.minimum_acceptable_price);
   if (sellerMinPrice > buyerMaxPrice) {
@@ -633,6 +647,11 @@ function getCompatibilityWarning(config: NegotiationConfig): string | undefined 
     return `No delivery-range overlap: seller minimum delivery (${sellerMinDelivery} days) is above buyer maximum delivery (${buyerMaxDelivery} days). Agents can still negotiate because these are private constraints.`;
   }
   return undefined;
+}
+
+function clampRounds(value: number): number {
+  if (Number.isNaN(value)) return MIN_ROUNDS;
+  return Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, Math.round(value)));
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

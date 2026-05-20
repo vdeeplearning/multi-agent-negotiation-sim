@@ -176,7 +176,7 @@ Use your actual backend URL if Render generated a different one.
 https://multi-agent-negotiation-gui.onrender.com
 ```
 
-16. In the GUI, choose **Mock Mode** and click **Start Negotiation**.
+16. In the GUI, choose **Mock Mode** and click **Start Negotiation**. The **Max rounds** field accepts values from 2 to 50.
 
 You should see the negotiation reveal each turn with a short delay.
 
