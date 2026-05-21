@@ -40,7 +40,7 @@ class MockProvider(BaseLLMProvider):
     ) -> AgentResponse:
         urgency = round_number / max_rounds
         if latest_offer and latest_offer.price <= config.maximum_acceptable_price and latest_offer.delivery_days <= config.max_delivery_days:
-            acceptable_warranty = latest_offer.warranty in {"standard", "extended"} or config.risk_tolerance > 0.7
+            acceptable_warranty = latest_offer.warranty == config.preferred_warranty or config.risk_tolerance > 0.7
             accept = acceptable_warranty and urgency > 0.55
             if accept:
                 return AgentResponse(
@@ -60,7 +60,7 @@ class MockProvider(BaseLLMProvider):
         price = min(config.maximum_acceptable_price, max(config.target_price, price))
         delivery = min(config.max_delivery_days, config.preferred_delivery_days + round(urgency * 12))
         contract = config.preferred_contract_months if urgency < 0.7 else config.preferred_contract_months + 6
-        warranty = "extended" if config.risk_tolerance < 0.6 else "standard"
+        warranty = config.preferred_warranty
         walk = latest_offer is not None and round_number >= max_rounds and latest_offer.price > config.maximum_acceptable_price
         return AgentResponse(
             message=f"I can move to ${price:,.0f} with {delivery} day delivery if warranty remains {warranty}.",
@@ -79,7 +79,7 @@ class MockProvider(BaseLLMProvider):
     ) -> AgentResponse:
         urgency = round_number / max_rounds
         if latest_offer and latest_offer.price >= config.minimum_acceptable_price and latest_offer.delivery_days >= config.minimum_delivery_days:
-            warranty_load_ok = latest_offer.warranty != "extended" or latest_offer.contract_months >= 18 or latest_offer.price > config.minimum_acceptable_price + 9000
+            warranty_load_ok = latest_offer.warranty == config.preferred_warranty or latest_offer.contract_months >= 18 or latest_offer.price > config.minimum_acceptable_price + 9000
             accept = warranty_load_ok and urgency > 0.65
             if accept:
                 return AgentResponse(
@@ -95,7 +95,7 @@ class MockProvider(BaseLLMProvider):
         price = max(config.minimum_acceptable_price, min(config.target_price, price))
         delivery = max(config.minimum_delivery_days, config.preferred_delivery_days - round(urgency * 10))
         contract = config.preferred_contract_months if urgency < 0.6 else max(18, config.preferred_contract_months - 6)
-        warranty = "standard" if urgency < 0.75 else "extended"
+        warranty = config.preferred_warranty if urgency < 0.75 else latest_offer.warranty if latest_offer else config.preferred_warranty
         walk = latest_offer is not None and round_number >= max_rounds and latest_offer.price < config.minimum_acceptable_price
         return AgentResponse(
             message=f"I can offer ${price:,.0f}, {delivery} day delivery, {warranty} warranty, and {contract} months.",

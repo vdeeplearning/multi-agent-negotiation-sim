@@ -358,15 +358,17 @@ Buyer utility rewards offers that are closer to the buyer's private goals:
 
 - lower price
 - faster delivery
-- stronger warranty
+- preferred warranty level
 - preferred contract length
 
 Seller utility rewards offers that are closer to the seller's private goals:
 
 - higher price
 - operationally feasible delivery timing
-- lower warranty burden
+- preferred warranty level
 - preferred contract length
+
+Warranty level is a configurable negotiation preference for each side. In the default scenario, the buyer prefers an extended warranty while the seller prefers a standard warranty, so warranty can become a real concession point rather than a fixed value.
 
 The two utility scores can move in opposite directions. For example, a lower price usually improves buyer utility and reduces seller utility.
 

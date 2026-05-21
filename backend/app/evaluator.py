@@ -12,6 +12,7 @@ from app.schemas import (
 WARRANTY_BUYER_VALUE = {"basic": 10, "standard": 60, "extended": 100}
 WARRANTY_SELLER_COST = {"basic": 100, "standard": 65, "extended": 25}
 MUTUAL_VIABILITY_THRESHOLD = 65.0
+WARRANTY_DISTANCE = {"basic": 0, "standard": 1, "extended": 2}
 
 
 def _clamp(value: float, low: float = 0, high: float = 100) -> float:
@@ -23,7 +24,7 @@ def buyer_utility(offer: Offer, config: BuyerConfig) -> float:
     price_score = 100 if price_band <= 0 else 100 - ((offer.price - config.target_price) / price_band) * 65
     delivery_score = 100 - max(0, offer.delivery_days - config.preferred_delivery_days) * 4
     contract_score = 100 - abs(offer.contract_months - config.preferred_contract_months) * 3
-    warranty_score = WARRANTY_BUYER_VALUE[offer.warranty]
+    warranty_score = 100 - abs(WARRANTY_DISTANCE[offer.warranty] - WARRANTY_DISTANCE[config.preferred_warranty]) * 45
     weighted = price_score * 0.42 + delivery_score * 0.22 + warranty_score * 0.2 + contract_score * 0.16
     return round(_clamp(weighted), 1)
 
@@ -33,7 +34,7 @@ def seller_utility(offer: Offer, config: SellerConfig) -> float:
     price_score = 100 if price_band <= 0 else 100 - ((config.target_price - offer.price) / price_band) * 65
     delivery_score = 100 - max(0, config.preferred_delivery_days - offer.delivery_days) * 4
     contract_score = 100 - abs(offer.contract_months - config.preferred_contract_months) * 2.4
-    warranty_score = WARRANTY_SELLER_COST[offer.warranty]
+    warranty_score = 100 - abs(WARRANTY_DISTANCE[offer.warranty] - WARRANTY_DISTANCE[config.preferred_warranty]) * 35
     weighted = price_score * 0.46 + delivery_score * 0.19 + warranty_score * 0.2 + contract_score * 0.15
     return round(_clamp(weighted), 1)
 

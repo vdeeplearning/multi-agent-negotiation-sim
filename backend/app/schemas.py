@@ -36,6 +36,7 @@ class BuyerConfig(BaseModel):
     preferred_delivery_days: int = 21
     max_delivery_days: int = 45
     preferred_contract_months: int = 12
+    preferred_warranty: WarrantyLevel = "extended"
     risk_tolerance: float = Field(default=0.45, ge=0, le=1)
     negotiation_style: str = "analytical but cooperative"
     hidden_priority: str = "control total cost while securing strong warranty protection"
@@ -47,6 +48,7 @@ class SellerConfig(BaseModel):
     preferred_delivery_days: int = 35
     minimum_delivery_days: int = 14
     preferred_contract_months: int = 24
+    preferred_warranty: WarrantyLevel = "standard"
     risk_tolerance: float = Field(default=0.55, ge=0, le=1)
     negotiation_style: str = "firm, transparent, and value-oriented"
     hidden_priority: str = "protect margin and avoid short contracts with extended warranty"

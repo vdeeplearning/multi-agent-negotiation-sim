@@ -92,6 +92,7 @@ const defaultConfig: NegotiationConfig = {
     preferred_delivery_days: 21,
     max_delivery_days: 45,
     preferred_contract_months: 12,
+    preferred_warranty: "extended",
     risk_tolerance: 0.45,
     negotiation_style: "analytical but cooperative",
     hidden_priority: "control total cost while securing strong warranty protection"
@@ -102,6 +103,7 @@ const defaultConfig: NegotiationConfig = {
     preferred_delivery_days: 35,
     minimum_delivery_days: 14,
     preferred_contract_months: 24,
+    preferred_warranty: "standard",
     risk_tolerance: 0.55,
     negotiation_style: "firm, transparent, and value-oriented",
     hidden_priority: "protect margin and avoid short contracts with extended warranty"
@@ -182,6 +184,14 @@ function ConfigPanel({
           <Field label="Preferred delivery" value={config.buyer.preferred_delivery_days} onChange={(v) => updateAgent("buyer", "preferred_delivery_days", v)} />
           <Field label="Max delivery" value={config.buyer.max_delivery_days} onChange={(v) => updateAgent("buyer", "max_delivery_days", v)} />
           <Field label="Contract months" value={config.buyer.preferred_contract_months} onChange={(v) => updateAgent("buyer", "preferred_contract_months", v)} />
+          <label className="field">
+            <span>Preferred warranty</span>
+            <select value={config.buyer.preferred_warranty} onChange={(event) => updateAgent("buyer", "preferred_warranty", event.target.value)}>
+              <option value="basic">basic</option>
+              <option value="standard">standard</option>
+              <option value="extended">extended</option>
+            </select>
+          </label>
           <Field label="Risk tolerance" value={config.buyer.risk_tolerance} onChange={(v) => updateAgent("buyer", "risk_tolerance", v)} />
           <Field label="Style" type="text" value={config.buyer.negotiation_style} onChange={(v) => updateAgent("buyer", "negotiation_style", v)} />
           <Field label="Hidden priority" type="text" value={config.buyer.hidden_priority} onChange={(v) => updateAgent("buyer", "hidden_priority", v)} />
@@ -193,6 +203,14 @@ function ConfigPanel({
           <Field label="Preferred delivery" value={config.seller.preferred_delivery_days} onChange={(v) => updateAgent("seller", "preferred_delivery_days", v)} />
           <Field label="Min delivery" value={config.seller.minimum_delivery_days} onChange={(v) => updateAgent("seller", "minimum_delivery_days", v)} />
           <Field label="Contract months" value={config.seller.preferred_contract_months} onChange={(v) => updateAgent("seller", "preferred_contract_months", v)} />
+          <label className="field">
+            <span>Preferred warranty</span>
+            <select value={config.seller.preferred_warranty} onChange={(event) => updateAgent("seller", "preferred_warranty", event.target.value)}>
+              <option value="basic">basic</option>
+              <option value="standard">standard</option>
+              <option value="extended">extended</option>
+            </select>
+          </label>
           <Field label="Risk tolerance" value={config.seller.risk_tolerance} onChange={(v) => updateAgent("seller", "risk_tolerance", v)} />
           <Field label="Style" type="text" value={config.seller.negotiation_style} onChange={(v) => updateAgent("seller", "negotiation_style", v)} />
           <Field label="Hidden priority" type="text" value={config.seller.hidden_priority} onChange={(v) => updateAgent("seller", "hidden_priority", v)} />
