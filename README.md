@@ -62,6 +62,19 @@ flowchart LR
   API --> UI
 ```
 
+### Architecture Nodes
+
+- **React Dashboard**: The browser UI for configuring agents, selecting the LLM provider, entering an API key locally, starting a negotiation, and observing the transcript, utility scores, chart, trace, and final outcome.
+- **FastAPI Routes**: The backend HTTP layer. It receives negotiation requests, reads temporary provider credentials from request headers, returns structured negotiation state, and exposes health/API docs endpoints.
+- **Negotiation Orchestrator**: The backend controller that initializes the run, owns the buyer/seller agents, connects provider adapters, and coordinates state transitions through LangGraph.
+- **LangGraph StateGraph**: The explicit workflow graph for the negotiation. It runs preflight checks, executes each agent turn, routes back to the next turn while the negotiation is still running, and exits when a terminal condition is reached.
+- **Buyer Agent**: The role-specific agent representing the buyer. It receives the buyer private config, public history, latest offer, evaluator guidance, and system constraints, then returns a structured offer or acceptance decision.
+- **Seller Agent**: The role-specific agent representing the seller. It receives the seller private config, public history, latest offer, evaluator guidance, and system constraints, then returns a structured offer or acceptance decision.
+- **Provider Adapter**: The abstraction layer for model calls. It supports Mock Mode, OpenAI, and Anthropic while returning the same structured `AgentResponse` shape to the orchestrator.
+- **Evaluation Engine**: The deterministic scoring and termination layer. It computes buyer/seller utility, validates offer shape, detects deadlock, recommends acceptance for mutually viable offers, and decides terminal outcomes.
+- **In-Memory Store**: The initial persistence layer for completed negotiation state. It is intentionally simple and can later be replaced by SQLite or Postgres.
+- **Trace Events**: The observability log. It records events such as agent called, model used, offer parsed, evaluator updated state, recommendation issued, and termination checked.
+
 ## Project Structure
 
 ```text
