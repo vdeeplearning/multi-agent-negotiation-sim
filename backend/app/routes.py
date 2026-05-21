@@ -56,6 +56,13 @@ def start_negotiation(
     x_llm_api_key: str | None = Header(default=None),
 ) -> NegotiationState:
     runtime = _runtime_from_headers(request.config, x_llm_provider, x_llm_model, x_llm_api_key)
+    if request.failure_mode:
+        runtime = ProviderRuntimeConfig(
+            requested_provider=runtime.requested_provider,
+            active_provider="mock",
+            model_name="mock-negotiator-v1",
+            fallback_reason="Failure Mode Demo runs in Mock Mode for deterministic, no-token observability testing.",
+        )
     clean_config = request.config.model_copy(update={"provider": runtime.active_provider, "model_name": runtime.model_name})
     orchestrator = NegotiationOrchestrator(clean_config, runtime, failure_mode=request.failure_mode)
     state = orchestrator.run()

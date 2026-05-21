@@ -637,7 +637,8 @@ function App() {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), NEGOTIATION_TIMEOUT_MS);
     const provider = settings.provider;
-    const effectiveProvider = provider !== "mock" && !settings.apiKey ? "mock" : provider;
+    const failureModeActive = failureMode !== "none";
+    const effectiveProvider = failureModeActive || (provider !== "mock" && !settings.apiKey) ? "mock" : provider;
     const effectiveConfig = {
       ...config,
       provider: effectiveProvider,
@@ -645,10 +646,10 @@ function App() {
     };
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      "X-LLM-Provider": provider,
-      "X-LLM-Model": settings.modelName
+      "X-LLM-Provider": effectiveProvider,
+      "X-LLM-Model": effectiveConfig.model_name
     };
-    if (settings.apiKey) {
+    if (!failureModeActive && settings.apiKey) {
       headers["X-LLM-API-Key"] = settings.apiKey;
     }
     try {
