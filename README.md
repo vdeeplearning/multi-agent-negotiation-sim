@@ -90,8 +90,8 @@ flowchart TB
   subgraph D["Deterministic Control And Integration"]
     API["FastAPI Routes"]
     GRAPH["Orchestrator / StateGraph"]
-    BUYER["Buyer Agent Wrapper"]
-    SELLER["Seller Agent Wrapper"]
+    BUYER["Buyer Agent\nRole wrapper + prompt context"]
+    SELLER["Seller Agent\nRole wrapper + prompt context"]
     PROVIDER["LLM Provider Adapter"]
     SCHEMA["Pydantic Schemas"]
     EVAL["Evaluator"]
@@ -135,7 +135,7 @@ flowchart TB
   TERM --> GRAPH
 ```
 
-The provider adapter, agent wrappers, schemas, evaluator, and trace logger are deterministic software components. The probabilistic part is the model completion behind the adapter when OpenAI or Anthropic is active. Negotiation messages, offer proposals, visible reasoning summaries, and accept/walk-away flags are model-generated outputs that must pass deterministic schema validation before they can affect state. In Mock Mode, the model completion box is replaced by deterministic mock logic for reproducible demos and tests.
+The provider adapter, Buyer Agent, Seller Agent, schemas, evaluator, and trace logger are deterministic software components in this implementation. The agents package role, private config, public history, latest offer, and evaluator guidance into model context; the probabilistic part is the model completion behind the adapter when OpenAI or Anthropic is active. Negotiation messages, offer proposals, visible reasoning summaries, and accept/walk-away flags are model-generated outputs that must pass deterministic schema validation before they can affect state. In Mock Mode, the model completion box is replaced by deterministic mock logic for reproducible demos and tests.
 
 ## Project Structure
 
