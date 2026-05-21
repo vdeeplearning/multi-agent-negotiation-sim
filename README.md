@@ -26,6 +26,12 @@ Render free instances can spin down when idle, so the first backend request may 
 
 ## Screenshots
 
+### Mock Mode Walkthrough
+
+This animated capture shows the no-key Mock Mode path: the dashboard starts a negotiation, plays back buyer/seller turns, updates utility scores, and surfaces provider/cost metadata and final outcome.
+
+![Mock mode walkthrough](assets/demo-negotiation.gif)
+
 ### Settings And Configuration
 
 The left rail contains browser-local LLM settings and private buyer/seller configuration. API keys are typed into the browser only and are never stored by the backend.
