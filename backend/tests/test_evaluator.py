@@ -28,7 +28,7 @@ def test_infeasible_price_config_is_explained() -> None:
 
 def test_acceptance_requires_valid_offer_and_utility() -> None:
     config = NegotiationConfig()
-    offer = Offer(price=94000, delivery_days=28, warranty="standard", contract_months=18)
+    offer = Offer(price=101000, delivery_days=25, warranty="standard", contract_months=24)
     entry = TranscriptEntry(
         round_number=5,
         agent=AgentRole.SELLER,
@@ -45,7 +45,7 @@ def test_acceptance_requires_valid_offer_and_utility() -> None:
 
 def test_evaluator_recommends_acceptance_for_mutual_viability() -> None:
     config = NegotiationConfig()
-    offer = Offer(price=95000, delivery_days=25, warranty="standard", contract_months=24)
+    offer = Offer(price=101000, delivery_days=25, warranty="standard", contract_months=24)
     utilities = compute_utilities(offer, config)
 
     guidance = evaluator_recommendation(utilities)

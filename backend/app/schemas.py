@@ -44,7 +44,7 @@ class BuyerConfig(BaseModel):
 
 class SellerConfig(BaseModel):
     target_price: float = 112000
-    minimum_acceptable_price: float = 87000
+    minimum_acceptable_price: float = 100000
     preferred_delivery_days: int = 35
     minimum_delivery_days: int = 14
     preferred_contract_months: int = 24
