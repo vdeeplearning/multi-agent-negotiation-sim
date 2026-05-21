@@ -81,17 +81,12 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph P["Probabilistic Components"]
-    BUYER["Buyer Agent"]
-    SELLER["Seller Agent"]
-    PROVIDER["LLM Provider Adapter"]
-    THINKING["Visible Reasoning Summary"]
-    MESSAGE["Negotiation Message"]
-  end
-
-  subgraph D["Deterministic Components"]
+  subgraph D["Deterministic Control And Integration"]
     API["FastAPI Routes"]
     GRAPH["Orchestrator / StateGraph"]
+    BUYER["Buyer Agent Wrapper"]
+    SELLER["Seller Agent Wrapper"]
+    PROVIDER["LLM Provider Adapter"]
     SCHEMA["Pydantic Schemas"]
     EVAL["Evaluator"]
     UTILITY["Utility Scorer"]
@@ -100,15 +95,31 @@ flowchart TB
     STORE["In-Memory Store"]
   end
 
+  subgraph P["Probabilistic Model Call"]
+    MODEL["LLM Model Completion\nOpenAI / Anthropic"]
+  end
+
+  subgraph O["Model-Generated Outputs"]
+    OFFER["Structured Offer Proposal"]
+    THINKING["Visible Reasoning Summary"]
+    MESSAGE["Negotiation Message"]
+    DECISION["Accept / Walk-Away Flags"]
+  end
+
   API --> GRAPH
   GRAPH --> BUYER
   GRAPH --> SELLER
   BUYER --> PROVIDER
   SELLER --> PROVIDER
-  PROVIDER --> THINKING
-  PROVIDER --> MESSAGE
-  MESSAGE --> SCHEMA
+  PROVIDER --> MODEL
+  MODEL --> OFFER
+  MODEL --> THINKING
+  MODEL --> MESSAGE
+  MODEL --> DECISION
+  OFFER --> SCHEMA
   THINKING --> SCHEMA
+  MESSAGE --> SCHEMA
+  DECISION --> SCHEMA
   SCHEMA --> EVAL
   EVAL --> UTILITY
   EVAL --> TERM
@@ -118,7 +129,7 @@ flowchart TB
   TERM --> GRAPH
 ```
 
-The agents propose messages, offers, and visible reasoning summaries. Deterministic components validate the response shape, score the offer, update state, log trace events, and decide whether the workflow continues or terminates.
+The provider adapter, agent wrappers, schemas, evaluator, and trace logger are deterministic software components. The probabilistic part is the model completion behind the adapter when OpenAI or Anthropic is active. Negotiation messages, offer proposals, visible reasoning summaries, and accept/walk-away flags are model-generated outputs that must pass deterministic schema validation before they can affect state. In Mock Mode, the model completion box is replaced by deterministic mock logic for reproducible demos and tests.
 
 ## Project Structure
 
