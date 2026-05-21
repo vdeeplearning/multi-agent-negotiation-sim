@@ -137,6 +137,28 @@ flowchart TB
 
 The provider adapter, Buyer Agent, Seller Agent, schemas, evaluator, and trace logger are deterministic software components in this implementation. The agents package role, private config, public history, latest offer, and evaluator guidance into model context; the probabilistic part is the model completion behind the adapter when OpenAI or Anthropic is active. Negotiation messages, offer proposals, visible reasoning summaries, and accept/walk-away flags are model-generated outputs that must pass deterministic schema validation before they can affect state. In Mock Mode, the model completion box is replaced by deterministic mock logic for reproducible demos and tests.
 
+### Deterministic vs Probabilistic Nodes
+
+- **Deterministic Control And Integration**: The lane for ordinary software components that should behave repeatably for the same inputs. These components own routing, validation, scoring, storage, and traceability.
+- **FastAPI Routes**: The HTTP boundary that receives frontend requests, reads temporary provider headers, applies request-level options such as failure-mode demos, and returns structured negotiation state.
+- **Orchestrator / StateGraph**: The LangGraph-backed workflow controller. It runs preflight checks, chooses whose turn is next, calls the correct agent, updates state, and stops when a terminal condition is reached.
+- **Buyer Agent**: The deterministic role wrapper for the buyer. It packages buyer private config, public history, latest offer, evaluator guidance, and system constraints into provider-ready context.
+- **Seller Agent**: The deterministic role wrapper for the seller. It packages seller private config, public history, latest offer, evaluator guidance, and system constraints into provider-ready context.
+- **LLM Provider Adapter**: The integration boundary for Mock Mode, OpenAI, and Anthropic. It normalizes provider-specific request formats, response parsing, token accounting, and cost metadata into a common `AgentResponse` shape.
+- **Pydantic Schemas**: The structured contract for offers, agent responses, configs, trace events, utility scores, and negotiation state.
+- **Evaluator**: The deterministic decision layer that checks offer validity, computes utilities, issues recommendations, and evaluates terminal conditions.
+- **Utility Scorer**: The scoring logic that converts an offer into buyer and seller utility values from 0 to 100.
+- **Termination Checker**: The rule set for accepted, failed, deadlocked, walked-away, and max-round outcomes.
+- **Trace Logger**: The observability layer that records provider selection, response parsing, schema validation, scoring, recommendations, and termination checks.
+- **In-Memory Store**: The current persistence mechanism for completed negotiation state. It keeps the demo simple while leaving a clear path to SQLite or Postgres.
+- **Probabilistic Model Call**: The lane for model behavior when OpenAI or Anthropic is active. This is where non-deterministic language-model generation occurs.
+- **LLM Model Completion**: The actual model response from OpenAI or Anthropic. In Mock Mode, this box is replaced by deterministic local mock logic.
+- **Model-Generated Outputs**: The lane for artifacts produced by the model call. These are not trusted directly; they must pass deterministic validation before changing state.
+- **Structured Offer Proposal**: The model-generated candidate offer containing price, delivery days, warranty level, and contract months.
+- **Visible Reasoning Summary**: A concise public rationale for the offer. It is intentionally not hidden chain-of-thought.
+- **Negotiation Message**: The model-generated public message shown in the round transcript.
+- **Accept / Walk-Away Flags**: Model-generated booleans indicating whether the agent wants to accept the latest package or exit the negotiation. The evaluator still determines whether those flags produce a valid terminal outcome.
+
 ## Project Structure
 
 ```text
