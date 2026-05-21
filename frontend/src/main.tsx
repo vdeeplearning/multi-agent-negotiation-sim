@@ -100,7 +100,7 @@ const defaultConfig: NegotiationConfig = {
   },
   seller: {
     target_price: 112000,
-    minimum_acceptable_price: 100000,
+    minimum_acceptable_price: 99500,
     preferred_delivery_days: 35,
     minimum_delivery_days: 14,
     preferred_contract_months: 24,
