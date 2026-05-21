@@ -57,7 +57,7 @@ def start_negotiation(
 ) -> NegotiationState:
     runtime = _runtime_from_headers(request.config, x_llm_provider, x_llm_model, x_llm_api_key)
     clean_config = request.config.model_copy(update={"provider": runtime.active_provider, "model_name": runtime.model_name})
-    orchestrator = NegotiationOrchestrator(clean_config, runtime)
+    orchestrator = NegotiationOrchestrator(clean_config, runtime, failure_mode=request.failure_mode)
     state = orchestrator.run()
     return store.save(state)
 

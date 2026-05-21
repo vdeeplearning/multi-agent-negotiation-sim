@@ -3,7 +3,7 @@ from typing import Literal, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.agents import NegotiationAgent
-from app.evaluator import compute_utilities, evaluate_termination, evaluator_recommendation, validate_feasible_config
+from app.evaluator import compute_utilities, evaluate_termination, evaluator_recommendation, is_offer_valid, validate_feasible_config
 from app.providers import get_provider
 from app.schemas import (
     AgentRole,
@@ -24,8 +24,14 @@ class NegotiationGraphState(TypedDict):
 
 
 class NegotiationOrchestrator:
-    def __init__(self, config: NegotiationConfig, runtime: ProviderRuntimeConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: NegotiationConfig,
+        runtime: ProviderRuntimeConfig | None = None,
+        failure_mode: str | None = None,
+    ) -> None:
         self.config = config
+        self.failure_mode = failure_mode
         self.runtime = runtime or ProviderRuntimeConfig(
             requested_provider=config.provider,
             active_provider=config.provider,
@@ -46,6 +52,11 @@ class NegotiationOrchestrator:
         )
         if self.runtime.fallback_reason:
             self._trace("provider_fallback", self.runtime.fallback_reason)
+        if self.failure_mode:
+            self._trace(
+                "failure_mode_injected",
+                f"Controlled mock failure mode requested: {self.failure_mode}.",
+            )
         self.graph = self._build_graph()
 
     def run(self) -> NegotiationState:
@@ -89,16 +100,29 @@ class NegotiationOrchestrator:
         actor = self.buyer if self.state.current_round % 2 == 0 else self.seller
         round_number = self.state.current_round + 1
         self._trace("agent_called", f"{actor.role.value.title()} agent invoked.", actor.role)
-        self._trace("tool_model_used", self.provider.name, actor.role)
+        self._trace("provider_selected", self.provider.name, actor.role)
 
-        response = actor.act(
-            config=self.config,
-            history=self.state.transcript,
-            latest_offer=self.state.latest_offer,
-            round_number=round_number,
-            evaluator_guidance=guidance,
-        )
-        self._trace("offer_parsed", "Structured JSON response validated with Pydantic.", actor.role)
+        try:
+            response = actor.act(
+                config=self.config,
+                history=self.state.transcript,
+                latest_offer=self.state.latest_offer,
+                round_number=round_number,
+                evaluator_guidance=guidance,
+                failure_mode=self.failure_mode,
+            )
+            self._trace("raw_response_received", "Provider returned a candidate agent response.", actor.role)
+            self._trace("structured_response_parsed", "Structured response parsed into AgentResponse.", actor.role)
+        except Exception as exc:
+            self.state.status = NegotiationStatus.FAILED
+            self.state.provider_info.token_usage = self.provider.usage
+            self.state.outcome_summary = "Provider response could not be parsed or validated."
+            self._trace("schema_validation_failed", f"Provider response rejected: {exc}", actor.role)
+            self._trace("termination_condition_checked", self.state.status.value, actor.role)
+            return {
+                "negotiation": self.state,
+                "evaluator_guidance": None,
+            }
 
         entry = TranscriptEntry(
             round_number=round_number,
@@ -114,10 +138,23 @@ class NegotiationOrchestrator:
         self.state.latest_offer = response.offer
         self.state.current_round = round_number
 
+        if not is_offer_valid(response.offer, self.config):
+            self.state.status = NegotiationStatus.FAILED
+            self.state.provider_info.token_usage = self.provider.usage
+            self.state.outcome_summary = "Latest offer was malformed or outside the public offer schema."
+            self._trace("schema_validation_failed", "Offer failed deterministic public offer validation.", actor.role)
+            self._trace("termination_condition_checked", self.state.status.value, actor.role)
+            return {
+                "negotiation": self.state,
+                "evaluator_guidance": None,
+            }
+        self._trace("schema_validation_passed", "Agent response and offer passed deterministic validation.", actor.role)
+
         utilities = compute_utilities(response.offer, self.config)
         self.state.utility_history.append(utilities)
+        self._trace("offer_evaluated", "Offer evaluated by deterministic scoring rules.", actor.role)
         self._trace(
-            "evaluator_updated_state",
+            "utility_scores_updated",
             f"Buyer utility {utilities.buyer}; seller utility {utilities.seller}.",
             actor.role,
         )
@@ -128,6 +165,10 @@ class NegotiationOrchestrator:
         status, summary = evaluate_termination(self.state.transcript, utilities, self.config)
         self.state.status = status
         self.state.provider_info.token_usage = self.provider.usage
+        if status == NegotiationStatus.DEADLOCKED:
+            self._trace("deadlock_detected", "Recent offers show repeated low-movement terms.", actor.role)
+        if status == NegotiationStatus.WALKED_AWAY:
+            self._trace("walk_away_detected", f"{actor.role.value.title()} set walk_away=true.", actor.role)
         self._trace("termination_condition_checked", status.value, actor.role)
         if summary:
             self.state.outcome_summary = summary

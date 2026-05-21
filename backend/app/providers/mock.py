@@ -18,7 +18,28 @@ class MockProvider(BaseLLMProvider):
         round_number: int = payload["round_number"]
         max_rounds: int = payload["max_rounds"]
         latest_offer: Offer | None = payload.get("latest_offer")
+        failure_mode: str | None = payload.get("failure_mode")
         self.add_usage(input_tokens=420 + len(payload.get("public_history", [])) * 110, output_tokens=145)
+        if failure_mode == "malformed_json" and round_number == 1:
+            raise ValueError("mock injected malformed_json response before schema parsing")
+        if failure_mode == "invalid_offer" and round_number == 1:
+            return AgentResponse.model_construct(
+                message="Injected invalid offer for evaluator demonstration.",
+                offer=Offer.model_construct(price=-1, delivery_days=0, warranty="standard", contract_months=0),
+                visible_reasoning_summary="This is a controlled invalid-offer demo for observability testing.",
+                accept=False,
+                walk_away=False,
+            )
+        if failure_mode == "premature_walkaway" and round_number == 1:
+            return AgentResponse(
+                message="I am walking away before there is enough negotiation history.",
+                offer=Offer(price=90000, delivery_days=30, warranty="standard", contract_months=12),
+                visible_reasoning_summary="This controlled demo shows how premature walk-away is detected and terminated.",
+                accept=False,
+                walk_away=True,
+            )
+        if failure_mode == "deadlock_bias":
+            return self._deadlock_turn(role, round_number)
         demo_accept_round = min(max_rounds, 8)
         if payload.get("evaluator_guidance") and latest_offer and round_number >= demo_accept_round:
             return AgentResponse(
@@ -31,6 +52,17 @@ class MockProvider(BaseLLMProvider):
         if role == AgentRole.BUYER:
             return self._buyer_turn(payload["private_config"], latest_offer, round_number, max_rounds)
         return self._seller_turn(payload["private_config"], latest_offer, round_number, max_rounds)
+
+    def _deadlock_turn(self, role: AgentRole, round_number: int) -> AgentResponse:
+        return AgentResponse(
+            message="I am holding near the same terms to demonstrate a low-movement deadlock.",
+            offer=Offer(price=101000, delivery_days=25, warranty="standard", contract_months=24),
+            visible_reasoning_summary=(
+                f"The {role.value} is deliberately showing minimal movement so the deterministic deadlock detector can be observed."
+            ),
+            accept=False,
+            walk_away=False,
+        )
 
     def _buyer_turn(
         self,

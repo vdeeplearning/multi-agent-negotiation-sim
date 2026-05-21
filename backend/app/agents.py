@@ -14,6 +14,7 @@ class NegotiationAgent:
         latest_offer: Offer | None,
         round_number: int,
         evaluator_guidance: str | None = None,
+        failure_mode: str | None = None,
     ) -> AgentResponse:
         private_config = config.buyer if self.role == AgentRole.BUYER else config.seller
         payload = {
@@ -33,5 +34,6 @@ class NegotiationAgent:
             "max_rounds": config.max_rounds,
             "scenario": config.scenario,
             "evaluator_guidance": evaluator_guidance,
+            "failure_mode": failure_mode,
         }
         return self.provider.complete_agent_turn(payload)

@@ -1,5 +1,7 @@
 # Multi-Agent Negotiation Simulator
 
+A full-stack demo of bounded multi-agent orchestration, structured outputs, deterministic evaluation, and AI workflow observability.
+
 A polished full-stack demo of two LLM-style agents negotiating a cloud GPU capacity contract. The Buyer Agent and Seller Agent negotiate over price, delivery timeline, warranty level, and contract length while keeping private goals out of the public transcript.
 
 The demo runs in Mock Mode without API keys, and it can also call OpenAI or Anthropic from the same UI. Model access is separated behind a provider layer: a small backend interface that turns "call this model/provider" into the same structured agent response, regardless of whether the response came from Mock Mode, OpenAI, or Anthropic. Because the rest of the system only depends on that common response shape, orchestration, evaluation, and UI code do not need to change when swapping model providers.
@@ -74,6 +76,49 @@ flowchart LR
 - **Evaluation Engine**: The deterministic scoring and termination layer. It computes buyer/seller utility, validates offer shape, detects deadlock, recommends acceptance for mutually viable offers, and decides terminal outcomes.
 - **In-Memory Store**: The initial persistence layer for completed negotiation state. It is intentionally simple and can later be replaced by SQLite or Postgres.
 - **Trace Events**: The observability log. It records events such as agent called, model used, offer parsed, evaluator updated state, recommendation issued, and termination checked.
+
+## Deterministic vs Probabilistic Architecture
+
+```mermaid
+flowchart TB
+  subgraph P["Probabilistic Components"]
+    BUYER["Buyer Agent"]
+    SELLER["Seller Agent"]
+    PROVIDER["LLM Provider Adapter"]
+    THINKING["Visible Reasoning Summary"]
+    MESSAGE["Negotiation Message"]
+  end
+
+  subgraph D["Deterministic Components"]
+    API["FastAPI Routes"]
+    GRAPH["Orchestrator / StateGraph"]
+    SCHEMA["Pydantic Schemas"]
+    EVAL["Evaluator"]
+    UTILITY["Utility Scorer"]
+    TERM["Termination Checker"]
+    TRACE["Trace Logger"]
+    STORE["In-Memory Store"]
+  end
+
+  API --> GRAPH
+  GRAPH --> BUYER
+  GRAPH --> SELLER
+  BUYER --> PROVIDER
+  SELLER --> PROVIDER
+  PROVIDER --> THINKING
+  PROVIDER --> MESSAGE
+  MESSAGE --> SCHEMA
+  THINKING --> SCHEMA
+  SCHEMA --> EVAL
+  EVAL --> UTILITY
+  EVAL --> TERM
+  UTILITY --> TRACE
+  TERM --> TRACE
+  TRACE --> STORE
+  TERM --> GRAPH
+```
+
+The agents propose messages, offers, and visible reasoning summaries. Deterministic components validate the response shape, score the offer, update state, log trace events, and decide whether the workflow continues or terminates.
 
 ## Project Structure
 
@@ -312,6 +357,17 @@ No API keys are required.
 
 Mock mode is also the graceful fallback when OpenAI or Anthropic is selected without an API key.
 
+For observability demos, Mock Mode can also inject controlled failure modes from the GUI or API request:
+
+```json
+{
+  "config": {},
+  "failure_mode": "invalid_offer"
+}
+```
+
+Supported values are `malformed_json`, `invalid_offer`, `premature_walkaway`, and `deadlock_bias`. Leave `failure_mode` unset or `null` for normal behavior.
+
 ## LLM Settings And API Keys
 
 The dashboard includes an **LLM Settings** panel where users can choose Mock Mode, OpenAI, or Anthropic, enter an API key, and select a model name. Settings are saved in browser `localStorage` only.
@@ -389,9 +445,56 @@ This is why the chart has one price curve and two utility curves.
 
 The buyer and seller are separate agents with different roles, private objectives, constraints, and negotiation styles. They do not share hidden goals. The orchestrator uses a LangGraph `StateGraph` to control preflight checks, turn order, state transitions, and termination. Each agent independently produces a structured offer and public message from its own perspective. The evaluator then deterministically scores the offer and decides whether the negotiation should continue, recommend acceptance, accept, fail, deadlock, or stop.
 
-## Probabilistic Reasoning vs Deterministic Control
+## Probabilistic Agents, Deterministic Control
 
-LLM agent outputs are probabilistic: a real model may vary its concessions, framing, and offer construction even when prompted with the same state. This project keeps that uncertainty inside provider adapters and agent responses. The surrounding system is deterministic: schemas validate messages, the orchestrator alternates turns, the evaluator computes utility scores, and termination rules are explicit. That separation is important for enterprise AI systems because it makes creative model behavior observable and bounded.
+LLMs generate proposals, public negotiation messages, and concise visible reasoning summaries. Those outputs are intentionally treated as probabilistic: a real model may vary its concessions, phrasing, and package construction even when the same scenario is repeated.
+
+Deterministic code owns the control plane:
+
+- Pydantic schemas validate response structure.
+- LangGraph-backed orchestration controls turn order and state transitions.
+- The evaluator computes utility scores from explicit rules.
+- Termination logic decides accepted, failed, deadlocked, walked away, or max rounds.
+- Trace logging records operational events for inspection.
+
+The project demonstrates bounded autonomy rather than unconstrained autonomous agents. The agents can propose, explain, accept, or walk away, but deterministic software validates, scores, routes, stores, and terminates the workflow. This pattern is relevant to operational AI, clinical AI workflows, enterprise AI systems, and other high-consequence environments where model behavior must be observable and constrained.
+
+## Failure Modes and Guardrails
+
+The simulator is designed to make failure handling visible rather than invisible:
+
+- **Malformed JSON**: real provider adapters parse model responses into structured objects; mock failure-mode demos can inject a parse failure so the orchestrator records schema validation failure and stops safely.
+- **Invalid offers**: deterministic offer validation rejects impossible public terms such as non-positive price, delivery, or contract length.
+- **Contradictory negotiation state**: preflight checks identify no-overlap scenarios such as seller minimum price above buyer maximum price while still allowing the agents to negotiate with private constraints.
+- **Premature walk-away**: a walk-away flag is treated as a terminal condition and logged in the trace.
+- **Deadlock**: repeated low-movement offers are detected by deterministic rules.
+- **Max-round termination**: every run has an explicit round ceiling from 2 to 50.
+- **Provider/model instability**: provider adapters isolate provider-specific request/response handling from orchestration and evaluation.
+- **Missing or invalid API keys**: if OpenAI or Anthropic is selected without a key, the backend falls back to Mock Mode and records the fallback in provider metadata.
+- **Fallback to mock mode**: Mock Mode keeps the demo runnable, testable, and reproducible without external services.
+
+The GUI includes a **Failure Mode Demo** selector for Mock Mode with controlled injections for malformed JSON, invalid offers, premature walk-away, and deadlock bias. These are deliberate educational scenarios for observing validation, evaluator behavior, and trace events.
+
+## System Design Lessons
+
+- Provider abstraction matters because model vendors, request formats, response formats, token accounting, and costs change independently from business workflow logic.
+- Structured outputs matter because the evaluator and UI need reliable fields, not prose scraping.
+- Deterministic evaluators matter because acceptance, utility, deadlock, and failure rules should be inspectable and repeatable.
+- Trace logging matters because operational AI workflows need an audit trail of agent calls, provider selection, validation, scoring, and termination.
+- Mock Mode matters because demos, tests, interviews, and CI should not depend on API keys or live model availability.
+- Bounded autonomy is safer than unconstrained autonomy because agents can propose actions while deterministic code controls workflow state and failure handling.
+
+## Operational AI Design Patterns
+
+- Probabilistic agents operating inside deterministic orchestration.
+- Separation of private agent state from public negotiation history.
+- Schema validation and structured outputs at the model boundary.
+- Evaluator-driven workflow control for scoring, recommendations, and termination.
+- Observability through trace events that explain each orchestration step.
+- Provider abstraction for Mock Mode, OpenAI, and Anthropic.
+- Bounded autonomy with explicit escalation or termination logic.
+- Reproducible mock-mode workflows for tests and demos.
+- Modular orchestration architecture that can be extended without rewriting agents, providers, or UI components.
 
 ## Testing
 
@@ -400,7 +503,7 @@ cd backend
 pytest
 ```
 
-Tests cover utility scoring, hard constraint validation, acceptance conditions, and deadlock detection.
+Tests cover utility scoring, hard constraint validation, acceptance conditions, deadlock detection, LangGraph orchestration, and controlled mock failure modes.
 
 ## Docker
 
@@ -413,11 +516,15 @@ docker run -p 8000:8000 --env-file .env multi-agent-negotiation-sim
 
 Run the frontend locally with `npm run dev`.
 
-## Future Work
+## Future Work: Toward an AI Workflow Observability Platform
 
-- Streaming turn execution instead of full-run POST response
-- SQLite or Postgres persistence
-- Scenario library for procurement, sales, legal, and supply-chain negotiations
-- Exportable negotiation reports
-- Human-in-the-loop approval at key concession thresholds
-- Comparative runs across different negotiation styles and model providers
+- Richer trace timelines with duration, latency, retries, and validation checkpoints.
+- Side-by-side provider/model comparison for the same scenario and private configs.
+- Regression tests across model providers to detect behavioral drift.
+- Failure-mode injection for provider outages, malformed responses, contradictory state, and policy violations.
+- Human reviewer escalation mode for sensitive concessions or low-confidence outcomes.
+- Persistent run storage with SQLite or Postgres.
+- Evaluation dashboards for agreement rate, utility balance, deadlock rate, and walk-away rate.
+- Cost and latency monitoring per provider, model, run, and agent turn.
+- Retrieval or document-grounded negotiation scenarios using contracts, policies, or procurement requirements.
+- Exportable negotiation reports for review, audit, and portfolio presentation.

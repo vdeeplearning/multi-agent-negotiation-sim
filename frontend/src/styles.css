@@ -204,6 +204,25 @@ h3 {
   padding: 10px 12px;
 }
 
+.failure-demo {
+  background: #f8fafc;
+  border: 1px solid #e0e7ef;
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 12px;
+}
+
+.failure-demo .field {
+  margin-bottom: 8px;
+}
+
+.failure-demo p {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 0;
+}
+
 .main-grid {
   display: grid;
   gap: 18px;

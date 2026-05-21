@@ -1,5 +1,5 @@
 from app.orchestrator import NegotiationOrchestrator
-from app.schemas import AgentRole, NegotiationConfig, Offer, TranscriptEntry
+from app.schemas import AgentRole, NegotiationConfig, NegotiationStatus, Offer, StartNegotiationRequest, TranscriptEntry
 
 
 def test_orchestrator_uses_compiled_langgraph() -> None:
@@ -14,6 +14,37 @@ def test_langgraph_orchestrator_runs_negotiation() -> None:
     assert state.current_round > 0
     assert state.status.value in {"accepted", "failed", "deadlocked", "walked_away", "max_rounds"}
     assert len(state.trace) > 0
+
+
+def test_failure_mode_field_does_not_break_default_request() -> None:
+    request = StartNegotiationRequest()
+
+    assert request.failure_mode is None
+
+
+def test_invalid_offer_failure_mode_is_detected() -> None:
+    state = NegotiationOrchestrator(NegotiationConfig(), failure_mode="invalid_offer").run()
+
+    assert state.status == NegotiationStatus.FAILED
+    assert any(event.event_type == "failure_mode_injected" for event in state.trace)
+    assert any(event.event_type == "schema_validation_failed" for event in state.trace)
+
+
+def test_malformed_json_failure_mode_is_handled_gracefully() -> None:
+    state = NegotiationOrchestrator(NegotiationConfig(), failure_mode="malformed_json").run()
+
+    assert state.status == NegotiationStatus.FAILED
+    assert state.current_round == 0
+    assert "could not be parsed" in (state.outcome_summary or "")
+    assert any(event.event_type == "schema_validation_failed" for event in state.trace)
+
+
+def test_deadlock_bias_failure_mode_reaches_deadlock() -> None:
+    state = NegotiationOrchestrator(NegotiationConfig(), failure_mode="deadlock_bias").run()
+
+    assert state.status == NegotiationStatus.DEADLOCKED
+    assert len(state.transcript) >= 4
+    assert any(event.event_type == "deadlock_detected" for event in state.trace)
 
 
 def test_concession_explanation_for_buyer_price_retreat() -> None:

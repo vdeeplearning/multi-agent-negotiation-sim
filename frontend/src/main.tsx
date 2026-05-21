@@ -15,6 +15,7 @@ import "./styles.css";
 
 type Warranty = "basic" | "standard" | "extended";
 type Role = "buyer" | "seller";
+type FailureMode = "none" | "malformed_json" | "invalid_offer" | "premature_walkaway" | "deadlock_bias";
 
 type Offer = {
   price: number;
@@ -153,12 +154,16 @@ function Field({
 function ConfigPanel({
   config,
   setConfig,
+  failureMode,
+  setFailureMode,
   onStart,
   loading,
   compatibilityWarning
 }: {
   config: NegotiationConfig;
   setConfig: (config: NegotiationConfig) => void;
+  failureMode: FailureMode;
+  setFailureMode: (failureMode: FailureMode) => void;
   onStart: () => void;
   loading: boolean;
   compatibilityWarning?: string;
@@ -216,6 +221,19 @@ function ConfigPanel({
           <Field label="Style" type="text" value={config.seller.negotiation_style} onChange={(v) => updateAgent("seller", "negotiation_style", v)} />
           <Field label="Hidden priority" type="text" value={config.seller.hidden_priority} onChange={(v) => updateAgent("seller", "hidden_priority", v)} />
         </div>
+      </div>
+      <div className="failure-demo">
+        <label className="field">
+          <span>Failure Mode Demo</span>
+          <select value={failureMode} onChange={(event) => setFailureMode(event.target.value as FailureMode)}>
+            <option value="none">None</option>
+            <option value="malformed_json">Malformed JSON</option>
+            <option value="invalid_offer">Invalid Offer</option>
+            <option value="premature_walkaway">Premature Walk-Away</option>
+            <option value="deadlock_bias">Deadlock Bias</option>
+          </select>
+        </label>
+        <p>Deliberately injects a controlled mock-mode failure so validation, termination, and trace events can be observed.</p>
       </div>
       <div className="run-row config-run-row">
         <label className="field compact">
@@ -526,7 +544,7 @@ function TracePanel({ trace }: { trace: TraceEvent[] }) {
       {trace.map((event) => (
         <div className="trace-row" key={event.index}>
           <span>{event.index}</span>
-          <b>{event.event_type.replaceAll("_", " ")}</b>
+          <b>{traceLabel(event.event_type)}</b>
           <p>{event.actor ? `${event.actor}: ` : ""}{event.detail}</p>
         </div>
       ))}
@@ -584,6 +602,7 @@ function LiveStepPanel({
 
 function App() {
   const [config, setConfig] = useState<NegotiationConfig>(defaultConfig);
+  const [failureMode, setFailureMode] = useState<FailureMode>("none");
   const [settings, setSettings] = useState<ProviderSettings>(defaultSettings);
   const [state, setState] = useState<NegotiationState | undefined>();
   const [visibleTurns, setVisibleTurns] = useState(0);
@@ -636,7 +655,10 @@ function App() {
       const response = await fetch(`${API_URL}/negotiations/start`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ config: effectiveConfig }),
+        body: JSON.stringify({
+          config: effectiveConfig,
+          failure_mode: failureMode === "none" ? null : failureMode
+        }),
         signal: controller.signal
       });
       if (!response.ok) {
@@ -660,10 +682,15 @@ function App() {
 
   const visibleTranscript = state?.transcript.slice(0, visibleTurns) ?? [];
   const visibleUtilities = state?.utility_history.slice(0, visibleTurns) ?? [];
-  const visibleTrace = state?.trace.filter((event) => event.event_type === "provider_fallback" || event.index <= visibleTurns * 5 + 1) ?? [];
   const latestTurn = visibleTranscript[visibleTranscript.length - 1];
   const latestScore = visibleUtilities[visibleUtilities.length - 1];
   const isReplaying = Boolean(state && visibleTurns < state.transcript.length);
+  const visibleTrace = state?.trace.filter((event) => (
+    !isReplaying
+    || event.event_type === "provider_fallback"
+    || event.event_type === "failure_mode_injected"
+    || event.index <= visibleTurns * 8 + 2
+  )) ?? [];
   const visibleStatus = isReplaying ? `playing ${visibleTurns}/${state?.transcript.length ?? 0}` : state?.status.replaceAll("_", " ") ?? "ready";
   const visibleState = state
     ? {
@@ -693,6 +720,8 @@ function App() {
           <ConfigPanel
             config={config}
             setConfig={setConfig}
+            failureMode={failureMode}
+            setFailureMode={setFailureMode}
             onStart={start}
             loading={loading}
             compatibilityWarning={compatibilityWarning}
@@ -746,6 +775,30 @@ function clampRounds(value: number): number {
 
 function formatStatus(status: string): string {
   return status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function traceLabel(eventType: string): string {
+  const labels: Record<string, string> = {
+    agent_called: "Agent called",
+    provider_selected: "Provider selected",
+    tool_model_used: "Provider selected",
+    raw_response_received: "Raw response received",
+    structured_response_parsed: "Structured response parsed",
+    offer_parsed: "Structured response parsed",
+    schema_validation_passed: "Schema validation passed",
+    schema_validation_failed: "Schema validation failed",
+    offer_evaluated: "Offer evaluated",
+    utility_scores_updated: "Utility scores updated",
+    evaluator_updated_state: "Utility scores updated",
+    termination_condition_checked: "Termination condition checked",
+    deadlock_detected: "Deadlock detected",
+    walk_away_detected: "Walk-away detected",
+    failure_mode_injected: "Failure mode injected",
+    evaluator_recommendation: "Evaluator recommendation",
+    provider_fallback: "Provider fallback",
+    configuration_checked: "Configuration checked"
+  };
+  return labels[eventType] ?? formatStatus(eventType);
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

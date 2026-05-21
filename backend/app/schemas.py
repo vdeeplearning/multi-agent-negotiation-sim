@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 WarrantyLevel = Literal["basic", "standard", "extended"]
+FailureMode = Literal["malformed_json", "invalid_offer", "premature_walkaway", "deadlock_bias"]
 
 
 class AgentRole(str, Enum):
@@ -133,6 +134,7 @@ class NegotiationState(BaseModel):
 
 class StartNegotiationRequest(BaseModel):
     config: NegotiationConfig = Field(default_factory=NegotiationConfig)
+    failure_mode: FailureMode | None = None
 
 
 class ProviderRuntimeConfig(BaseModel):
