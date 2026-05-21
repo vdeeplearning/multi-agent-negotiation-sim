@@ -19,7 +19,8 @@ class MockProvider(BaseLLMProvider):
         max_rounds: int = payload["max_rounds"]
         latest_offer: Offer | None = payload.get("latest_offer")
         self.add_usage(input_tokens=420 + len(payload.get("public_history", [])) * 110, output_tokens=145)
-        if payload.get("evaluator_guidance") and latest_offer:
+        demo_accept_round = min(max_rounds, 8)
+        if payload.get("evaluator_guidance") and latest_offer and round_number >= demo_accept_round:
             return AgentResponse(
                 message="I can accept this offer because the evaluator indicates it is mutually viable.",
                 offer=latest_offer,
@@ -41,7 +42,7 @@ class MockProvider(BaseLLMProvider):
         urgency = round_number / max_rounds
         if latest_offer and latest_offer.price <= config.maximum_acceptable_price and latest_offer.delivery_days <= config.max_delivery_days:
             acceptable_warranty = latest_offer.warranty == config.preferred_warranty or config.risk_tolerance > 0.7
-            accept = acceptable_warranty and urgency > 0.55
+            accept = acceptable_warranty and round_number >= min(max_rounds, 8)
             if accept:
                 return AgentResponse(
                     message="I can accept this package because it balances cost control with operational coverage.",
@@ -80,7 +81,7 @@ class MockProvider(BaseLLMProvider):
         urgency = round_number / max_rounds
         if latest_offer and latest_offer.price >= config.minimum_acceptable_price and latest_offer.delivery_days >= config.minimum_delivery_days:
             warranty_load_ok = latest_offer.warranty == config.preferred_warranty or latest_offer.contract_months >= 18 or latest_offer.price > config.minimum_acceptable_price + 9000
-            accept = warranty_load_ok and urgency > 0.65
+            accept = warranty_load_ok and round_number >= min(max_rounds, 8)
             if accept:
                 return AgentResponse(
                     message="I can accept this structure because the commitment and service scope are commercially workable.",

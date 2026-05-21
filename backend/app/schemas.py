@@ -57,7 +57,7 @@ class SellerConfig(BaseModel):
 class NegotiationConfig(BaseModel):
     buyer: BuyerConfig = Field(default_factory=BuyerConfig)
     seller: SellerConfig = Field(default_factory=SellerConfig)
-    max_rounds: int = Field(default=8, ge=2, le=50)
+    max_rounds: int = Field(default=20, ge=2, le=50)
     provider: str = "mock"
     model_name: str = "mock-negotiator-v1"
     scenario: str = "Cloud GPU capacity contract for a mid-market AI platform team."

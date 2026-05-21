@@ -109,7 +109,7 @@ const defaultConfig: NegotiationConfig = {
     negotiation_style: "firm, transparent, and value-oriented",
     hidden_priority: "protect margin and avoid short contracts with extended warranty"
   },
-  max_rounds: 8,
+  max_rounds: 20,
   provider: "mock",
   model_name: "mock-negotiator-v1",
   scenario: "Cloud GPU capacity contract for a mid-market AI platform team."
@@ -567,7 +567,7 @@ function LiveStepPanel({
       <div className={isReplaying ? "pulse-line active" : "pulse-line"} />
       <p>
         {isReplaying
-          ? `Revealing turn ${visibleTurns} of ${totalTurns}.`
+          ? `Playing back turn ${visibleTurns} of ${totalTurns}.`
           : totalTurns
             ? "Negotiation playback complete."
             : "Start a negotiation to watch each agent turn."}
