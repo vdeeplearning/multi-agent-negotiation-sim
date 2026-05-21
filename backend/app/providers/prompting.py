@@ -38,6 +38,7 @@ def build_agent_prompt(payload: dict[str, Any]) -> str:
             "agent": entry.agent.value,
             "message": entry.message,
             "offer": entry.offer.model_dump(),
+            "concession_explanation": entry.concession_explanation,
             "accept": entry.accept,
             "walk_away": entry.walk_away,
         }
@@ -63,7 +64,11 @@ def build_agent_prompt(payload: dict[str, Any]) -> str:
         "offer is mutually viable and the offer is inside your private constraints, you should "
         "normally accept it by returning accept=true instead of continuing to counteroffer. "
         "Only reject that guidance if the offer violates your private constraints or creates "
-        "a material risk your public message can summarize without revealing private goals.\n\n"
+        "a material risk your public message can summarize without revealing private goals. "
+        "Use concession discipline: buyer price offers should generally move upward over time, "
+        "and seller price offers should generally move downward over time. Only reverse a price "
+        "concession when the other side worsens important non-price terms or makes a materially "
+        "less attractive counteroffer.\n\n"
         f"{json.dumps(task, indent=2)}"
     )
 

@@ -40,6 +40,7 @@ type TranscriptEntry = {
   message: string;
   offer: Offer;
   visible_reasoning_summary: string;
+  concession_explanation?: string;
   accept: boolean;
   walk_away: boolean;
 };
@@ -402,6 +403,12 @@ function Transcript({ state }: { state?: NegotiationState }) {
             <b>Visible thinking</b>
             <span>{entry.visible_reasoning_summary}</span>
           </div>
+          {entry.concession_explanation && (
+            <div className="concession-callout">
+              <b>Concession explanation</b>
+              <span>{entry.concession_explanation}</span>
+            </div>
+          )}
           <code>{JSON.stringify(entry.offer)}</code>
         </article>
       ))}

@@ -8,6 +8,7 @@ from app.providers import get_provider
 from app.schemas import (
     AgentRole,
     NegotiationConfig,
+    Offer,
     ProviderRunInfo,
     ProviderRuntimeConfig,
     NegotiationState,
@@ -105,6 +106,7 @@ class NegotiationOrchestrator:
             message=response.message,
             offer=response.offer,
             visible_reasoning_summary=response.visible_reasoning_summary,
+            concession_explanation=self._concession_explanation(actor.role, response.offer),
             accept=response.accept,
             walk_away=response.walk_away,
         )
@@ -138,6 +140,81 @@ class NegotiationOrchestrator:
     def _route_next(self, graph_state: NegotiationGraphState) -> Literal["continue", "end"]:
         negotiation = graph_state["negotiation"]
         return "continue" if negotiation.status == NegotiationStatus.RUNNING else "end"
+
+    def _concession_explanation(self, actor: AgentRole, offer: Offer) -> str | None:
+        previous_same = [entry for entry in self.state.transcript if entry.agent == actor]
+        if not previous_same:
+            return None
+
+        prior_offer = previous_same[-1].offer
+        if actor == AgentRole.BUYER and offer.price < prior_offer.price:
+            reasons = self._worsened_terms_for_buyer()
+            return self._format_concession_explanation(
+                actor="buyer",
+                action="reduced price",
+                counterparty="seller",
+                reasons=reasons,
+            )
+        if actor == AgentRole.SELLER and offer.price > prior_offer.price:
+            reasons = self._worsened_terms_for_seller()
+            return self._format_concession_explanation(
+                actor="seller",
+                action="increased price",
+                counterparty="buyer",
+                reasons=reasons,
+            )
+        return None
+
+    def _worsened_terms_for_buyer(self) -> list[str]:
+        seller_entries = [entry for entry in self.state.transcript if entry.agent == AgentRole.SELLER]
+        if len(seller_entries) < 2:
+            return []
+        previous = seller_entries[-2].offer
+        latest = seller_entries[-1].offer
+        reasons = []
+        if latest.price > previous.price:
+            reasons.append("price")
+        if self._warranty_distance(latest.warranty, self.config.buyer.preferred_warranty) > self._warranty_distance(previous.warranty, self.config.buyer.preferred_warranty):
+            reasons.append("warranty")
+        if abs(latest.contract_months - self.config.buyer.preferred_contract_months) > abs(previous.contract_months - self.config.buyer.preferred_contract_months):
+            reasons.append("contract length")
+        if abs(latest.delivery_days - self.config.buyer.preferred_delivery_days) > abs(previous.delivery_days - self.config.buyer.preferred_delivery_days):
+            reasons.append("delivery")
+        return reasons
+
+    def _worsened_terms_for_seller(self) -> list[str]:
+        buyer_entries = [entry for entry in self.state.transcript if entry.agent == AgentRole.BUYER]
+        if len(buyer_entries) < 2:
+            return []
+        previous = buyer_entries[-2].offer
+        latest = buyer_entries[-1].offer
+        reasons = []
+        if latest.price < previous.price:
+            reasons.append("price")
+        if self._warranty_distance(latest.warranty, self.config.seller.preferred_warranty) > self._warranty_distance(previous.warranty, self.config.seller.preferred_warranty):
+            reasons.append("warranty")
+        if abs(latest.contract_months - self.config.seller.preferred_contract_months) > abs(previous.contract_months - self.config.seller.preferred_contract_months):
+            reasons.append("contract length")
+        if abs(latest.delivery_days - self.config.seller.preferred_delivery_days) > abs(previous.delivery_days - self.config.seller.preferred_delivery_days):
+            reasons.append("delivery")
+        return reasons
+
+    def _format_concession_explanation(self, actor: str, action: str, counterparty: str, reasons: list[str]) -> str:
+        if reasons:
+            return f"Concession explanation: {actor} {action} because {counterparty} worsened {self._join_reasons(reasons)}."
+        return f"Concession explanation: {actor} {action} because {counterparty}'s latest terms did not improve enough to support the prior price concession."
+
+    def _join_reasons(self, reasons: list[str]) -> str:
+        unique_reasons = list(dict.fromkeys(reasons))
+        if len(unique_reasons) == 1:
+            return unique_reasons[0]
+        if len(unique_reasons) == 2:
+            return f"{unique_reasons[0]} and {unique_reasons[1]}"
+        return f"{', '.join(unique_reasons[:-1])}, and {unique_reasons[-1]}"
+
+    def _warranty_distance(self, actual: str, preferred: str) -> int:
+        order = {"basic": 0, "standard": 1, "extended": 2}
+        return abs(order[actual] - order[preferred])
 
     def _trace(self, event_type: str, detail: str, actor: AgentRole | None = None) -> None:
         self.state.trace.append(

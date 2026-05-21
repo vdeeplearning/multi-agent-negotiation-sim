@@ -86,6 +86,7 @@ class TranscriptEntry(BaseModel):
     message: str
     offer: Offer
     visible_reasoning_summary: str
+    concession_explanation: str | None = None
     accept: bool
     walk_away: bool
 
