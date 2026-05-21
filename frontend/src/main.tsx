@@ -92,8 +92,8 @@ const defaultConfig: NegotiationConfig = {
     preferred_delivery_days: 21,
     max_delivery_days: 45,
     preferred_contract_months: 12,
-    preferred_warranty: "extended",
-    risk_tolerance: 0.45,
+    preferred_warranty: "standard",
+    risk_tolerance: 0.6,
     negotiation_style: "analytical but cooperative",
     hidden_priority: "control total cost while securing strong warranty protection"
   },

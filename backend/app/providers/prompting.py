@@ -59,7 +59,11 @@ def build_agent_prompt(payload: dict[str, Any]) -> str:
         "You are one agent in a contract negotiation. Return only valid JSON matching "
         "the provided schema. Do not reveal private config values directly, hidden priorities, "
         "reservation prices, or hidden constraints. visible_reasoning_summary must be a concise "
-        "public rationale, not hidden chain-of-thought.\n\n"
+        "public rationale, not hidden chain-of-thought. If evaluator_guidance says the latest "
+        "offer is mutually viable and the offer is inside your private constraints, you should "
+        "normally accept it by returning accept=true instead of continuing to counteroffer. "
+        "Only reject that guidance if the offer violates your private constraints or creates "
+        "a material risk your public message can summarize without revealing private goals.\n\n"
         f"{json.dumps(task, indent=2)}"
     )
 

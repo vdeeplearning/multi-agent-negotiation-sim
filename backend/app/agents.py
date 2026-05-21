@@ -24,6 +24,10 @@ class NegotiationAgent:
             "system_constraints": {
                 "do_not_reveal_private_goals": True,
                 "return_json_schema": "AgentResponse",
+                "accept_mutually_viable_guidance": (
+                    "If evaluator_guidance says the latest offer is mutually viable, and the latest offer does not "
+                    "violate your private constraints, prefer returning accept=true over making another counteroffer."
+                ),
             },
             "round_number": round_number,
             "max_rounds": config.max_rounds,

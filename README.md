@@ -368,7 +368,7 @@ Seller utility rewards offers that are closer to the seller's private goals:
 - preferred warranty level
 - preferred contract length
 
-Warranty level is a configurable negotiation preference for each side. In the default scenario, the buyer prefers an extended warranty while the seller prefers a standard warranty, so warranty can become a real concession point rather than a fixed value.
+Warranty level is a configurable negotiation preference for each side. In the default scenario, both sides begin with a standard warranty preference so the demo is more likely to converge, but the buyer can be changed to prefer extended coverage and the seller can be changed to prefer basic or standard coverage.
 
 The two utility scores can move in opposite directions. For example, a lower price usually improves buyer utility and reduces seller utility.
 
