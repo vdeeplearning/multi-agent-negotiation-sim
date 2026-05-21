@@ -2,7 +2,7 @@
 
 A polished full-stack demo of two LLM-style agents negotiating a cloud GPU capacity contract. The Buyer Agent and Seller Agent negotiate over price, delivery timeline, warranty level, and contract length while keeping private goals out of the public transcript.
 
-The first implementation path is mock mode, so the complete demo runs without API keys. The provider layer is intentionally isolated so OpenAI, Anthropic, or other structured-output model adapters can be added without changing orchestration, evaluation, or UI code.
+The demo runs in Mock Mode without API keys, and it can also call OpenAI or Anthropic from the same UI. Model access is separated behind a provider layer: a small backend interface that turns "call this model/provider" into the same structured agent response, regardless of whether the response came from Mock Mode, OpenAI, or Anthropic. Because the rest of the system only depends on that common response shape, orchestration, evaluation, and UI code do not need to change when swapping model providers.
 
 ## Live Demo
 
@@ -326,14 +326,14 @@ X-LLM-API-Key: temporary browser key
 
 If OpenAI or Anthropic is selected without an API key, the backend gracefully falls back to Mock Mode and returns a fallback note in `provider_info`.
 
-The provider layer contains:
+The provider layer is the backend adapter boundary around model calls. Each provider class implements the same method and returns the same validated `AgentResponse` schema:
 
 - `BaseLLMProvider`
 - `MockProvider`
 - `OpenAIProvider`
 - `AnthropicProvider`
 
-The response includes active provider/model metadata, token usage, and approximate cost when rates are known.
+This keeps provider-specific details such as API URLs, request formats, response parsing, token usage, and cost estimates out of the negotiation logic. The response includes active provider/model metadata, token usage, and approximate cost when rates are known.
 
 ## Step Observability
 
